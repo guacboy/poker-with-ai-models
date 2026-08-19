@@ -20,6 +20,7 @@ export interface SeatViewModel {
   buyInsRemaining: number;
   lastActionLabel?: string;
   isWinner?: boolean;
+  isShowdownLoser?: boolean;
 }
 
 interface SeatProps {
@@ -44,7 +45,11 @@ export function Seat({ seat, isHuman, speechMessage, positionClassName, bigBlind
   return (
     <div className={classes}>
       {speechMessage && <SpeechBubble message={speechMessage} />}
-      <div className={`seat__cards${seat.isWinner ? " seat__cards--winner" : ""}`}>
+      <div
+        className={`seat__cards${seat.isWinner ? " seat__cards--winner" : ""}${
+          seat.isShowdownLoser ? " seat__cards--lost" : ""
+        }`}
+      >
         {/* keying on the card itself forces a remount (and replays the reveal
             animation) when a hidden slot becomes a dealt/shown card */}
         <PlayingCard key={seat.holeCards?.[0] ?? "hidden-0"} card={seat.holeCards?.[0]} hidden={!seat.holeCards} />

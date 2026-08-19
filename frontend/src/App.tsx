@@ -71,6 +71,7 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
 
   const seats: SeatViewModel[] = publicState.players.map((player) => {
     const handSeat = displayHand?.seats.find((s) => s.player_id === player.player_id);
+    const isWinner = isHandResult && (state.handResultWinners?.includes(player.player_id) ?? false);
     return {
       playerId: player.player_id,
       name: player.name,
@@ -89,7 +90,10 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
       buyInsUsed: player.buy_ins_used,
       buyInsRemaining: player.buy_ins_remaining,
       lastActionLabel: state.lastActionLabelByPlayer[player.player_id],
-      isWinner: isHandResult && (state.handResultWinners?.includes(player.player_id) ?? false),
+      isWinner,
+      // once the result is on screen (river shown, hand decided), dim every
+      // other hand's cards to contrast with the winner's glow
+      isShowdownLoser: isHandResult && !isWinner,
     };
   });
 

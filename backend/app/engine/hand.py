@@ -62,6 +62,14 @@ class Hand:
         self._dealt_hole_cards = {
             pid: [_card_str(c) for c in state.hole_cards[i]] for i, pid in enumerate(seat_player_ids)
         }
+        # pokerkit also flips a player's live status (the same flag folding
+        # uses) once their hand is killed/mucked at the end of an all-in
+        # showdown -- and it does this the instant the last action closes
+        # betting, before any of the remaining board is even dealt. Tracking
+        # real folds ourselves keeps `is_folded` meaning "actually folded"
+        # instead of "no longer in contention", so a losing (but never
+        # folded) hand doesn't dim out and spoil the result mid-runout.
+        self._explicitly_folded_ids: set[str] = set()
 
     @classmethod
     def start(
@@ -126,8 +134,7 @@ class Hand:
         return self.state.bets[idx]
 
     def is_folded(self, player_id: str) -> bool:
-        idx = self.seat_player_ids.index(player_id)
-        return not self.state.statuses[idx]
+        return player_id in self._explicitly_folded_ids
 
     def legal_actions(self) -> LegalActions:
         s = self.state
@@ -142,7 +149,9 @@ class Hand:
         )
 
     def apply_fold(self) -> None:
+        folding_player_id = self.current_actor_id
         self.state.fold()
+        self._explicitly_folded_ids.add(folding_player_id)
 
     def apply_check_or_call(self) -> None:
         self.state.check_or_call()

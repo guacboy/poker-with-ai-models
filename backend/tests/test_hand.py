@@ -89,3 +89,44 @@ def test_dealt_hole_cards_of_survives_hand_completion():
     for pid in all_seats:
         assert hand.dealt_hole_cards_of(pid) == dealt_before[pid]
         assert len(hand.dealt_hole_cards_of(pid)) == 2
+
+
+def test_is_folded_reflects_only_real_folds_not_showdown_mucking():
+    """pokerkit flips the same live status flag folding uses when it mucks a
+    losing hand at the end of an all-in showdown -- and does it the instant
+    the closing action applies, before any remaining board even gets shown.
+    is_folded must not pick that up as a fold, or the frontend dims out the
+    losers (and thus spoils who won) as soon as the runout starts, long
+    before the river is actually revealed."""
+    t = make_tournament()
+    hand = t.start_hand()
+
+    # nobody folds -- forces a real showdown among everyone, so any seat
+    # coming back is_folded=True afterwards would only be from mucking
+    while not hand.is_over:
+        actor_id = hand.current_actor_id
+        legal = hand.legal_actions()
+        action = "check_or_call" if legal.can_check_or_call else "fold"
+        t.apply_action(actor_id, action)
+
+    for pid in hand.seat_player_ids:
+        assert not hand.is_folded(pid), f"{pid} never folded but is_folded() says otherwise"
+
+
+def test_is_folded_still_true_for_actual_folds():
+    t = make_tournament()
+    hand = t.start_hand()
+    folded_ids = set()
+
+    while not hand.is_over:
+        actor_id = hand.current_actor_id
+        legal = hand.legal_actions()
+        if legal.can_fold:
+            t.apply_action(actor_id, "fold")
+            folded_ids.add(actor_id)
+        else:
+            t.apply_action(actor_id, "check_or_call")
+
+    assert folded_ids, "expected at least one real fold in this hand"
+    for pid in hand.seat_player_ids:
+        assert hand.is_folded(pid) == (pid in folded_ids)

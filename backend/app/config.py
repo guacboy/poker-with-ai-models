@@ -8,7 +8,7 @@ values to decide which player implementation to instantiate per seat.
 # TODO(feat): add profile pictures for the bots in assets/png/
 # TODO(feat): add what type of win it was below the community cards (e.g., Straight flush)
 # TODO(chore): always show the human's options but grey and disable it when it is not their turn. move the "waiting for players" to appear under the human's options
-# TODO(bug): cards are dimmed when no more actions are present except for the winning hand too early, this spoils who wins the hand in advanced (e.g., going all in at the pre-flop). can you make all the players card currently in play continue to be visible until the river is shown, showcasing which hand won by highlighting the glow and dimming the other's cards)
+# TODO(chore): add a card.mp3 sound to when new cards are dealt each round
 # TODO(bug): double check the rebuy logic, i think the players are able to rebuy 4 times instead of 3. also, the rebuy number doesn't update after 2.
 
 from __future__ import annotations

@@ -233,6 +233,15 @@
   }
 }
 
+/* once the result is on screen, dim every hand that didn't win to contrast
+   with the winner's glow -- fades in rather than snapping, since it applies
+   at the same instant the river settles */
+.seat__cards--lost {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+
 .seat__info {
   background: rgba(13, 17, 23, 0.85);
   border: 1px solid var(--border);
