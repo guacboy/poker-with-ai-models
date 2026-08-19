@@ -9,21 +9,12 @@ import { createTournament, useGameSocket } from "./hooks/useGameSocket";
 
 const SPEECH_BUBBLE_DURATION_MS = 4500;
 
-function StartScreen({ onStart }: { onStart: (name: string) => void }) {
-  const [name, setName] = useState("You");
+function StartScreen({ onStart }: { onStart: () => void }) {
   return (
     <div className="start-screen">
       <h1>AI Poker Table</h1>
       <p>No-Limit Hold'em, 6-max, against Claude, OpenAI, DeepSeek, Gemini, and Grok.</p>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onStart(name.trim() || "You");
-        }}
-      >
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={20} />
-        <button type="submit">Start Tournament</button>
-      </form>
+      <button onClick={onStart}>Start Tournament</button>
     </div>
   );
 }
@@ -135,8 +126,8 @@ export default function App() {
   if (!session) {
     return (
       <StartScreen
-        onStart={async (name) => {
-          const result = await createTournament(name);
+        onStart={async () => {
+          const result = await createTournament();
           setSession(result);
         }}
       />

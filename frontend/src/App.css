@@ -16,20 +16,6 @@
   max-width: 420px;
 }
 
-.start-screen form {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.start-screen input {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 6px;
-  padding: 8px 12px;
-}
-
 .start-screen button {
   background: var(--accent);
   color: white;
@@ -37,6 +23,7 @@
   border-radius: 6px;
   padding: 8px 16px;
   font-weight: 600;
+  margin-top: 12px;
 }
 
 .loading-screen {

@@ -122,14 +122,14 @@ export function useGameSocket(tournamentId: string | null) {
   return { state, submitAction };
 }
 
-export async function createTournament(humanName: string): Promise<{
+export async function createTournament(): Promise<{
   tournamentId: string;
   humanPlayerId: string;
 }> {
   const resp = await fetch(`${API_BASE}/tournament/new`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ human_name: humanName }),
+    body: JSON.stringify({ human_name: "You" }),
   });
   if (!resp.ok) throw new Error(`failed to start tournament (${resp.status})`);
   const body = await resp.json();
