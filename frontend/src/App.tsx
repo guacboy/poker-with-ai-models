@@ -97,7 +97,11 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
     };
   });
 
-  const isMyTurn = state.actorView?.your_player_id === humanPlayerId;
+  // derived from the broadcast state (not state.actorView -- that's only
+  // refreshed the instant it's the human's turn, whereas current_actor_id is
+  // kept up to date on every event) so it flips false the moment an opponent
+  // starts acting, not just whenever the human's own view happens to update
+  const isMyTurn = publicState.hand?.current_actor_id === humanPlayerId;
 
   return (
     <div className="game-screen">
@@ -121,7 +125,8 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
         />
 
         <ActionControls
-          legalActions={isMyTurn ? state.actorView!.legal_actions : null}
+          legalActions={state.actorView?.legal_actions ?? null}
+          disabled={!isMyTurn}
           bigBlind={publicState.big_blind}
           onAction={(action, amount) => {
             submitAction(action, amount).catch((err) => console.error(err));

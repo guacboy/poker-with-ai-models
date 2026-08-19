@@ -7,9 +7,8 @@ values to decide which player implementation to instantiate per seat.
 # TODO(feat): png of chips amount next to player
 # TODO(feat): add profile pictures for the bots in assets/png/
 # TODO(feat): add what type of win it was below the community cards (e.g., Straight flush)
-# TODO(chore): always show the human's options but grey and disable it when it is not their turn. move the "waiting for players" to appear under the human's options
 # TODO(chore): add a card.mp3 sound to when new cards are dealt each round
-# TODO(bug): double check the rebuy logic, i think the players are able to rebuy 4 times instead of 3. also, the rebuy number doesn't update after 2.
+# TODO(chore): add betting.mp3 sounds to when a player calls an all-in bet
 
 from __future__ import annotations
 

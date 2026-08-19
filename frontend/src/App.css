@@ -455,12 +455,25 @@
   align-items: center;
   gap: 8px;
   min-height: 60px;
+  /* the human's seat sits near the bottom edge of the table oval, so its bet
+     chip can extend past the felt -- this margin keeps it from overlapping
+     the controls right below */
+  margin-top: 30px;
 }
 
 .action-controls--waiting {
   color: var(--text-dim);
   font-size: 14px;
   padding-top: 16px;
+}
+
+.action-controls--disabled {
+  opacity: 0.45;
+}
+
+.action-controls__waiting {
+  color: var(--text-dim);
+  font-size: 13px;
 }
 
 .action-controls__raise {

@@ -90,7 +90,11 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
           return {
             ...state,
             publicState: event.state,
-            actorView: null,
+            // actorView is deliberately left as-is here (not reset to null):
+            // the human's action controls stay on screen (disabled) between
+            // their turns instead of disappearing, so this keeps the last
+            // known legal_actions shape around as a placeholder until the
+            // next "awaiting_action" event replaces it with the real one
             lastActionLabelByPlayer: {},
             lastHandSnapshot: event.state.hand,
             handResultWinners: null,
@@ -125,7 +129,9 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
           return {
             ...state,
             publicState: event.state,
-            actorView: null,
+            // see the "hand_started" case above -- actorView is left in
+            // place so the controls stay visible (disabled) until it's the
+            // human's turn again
             lastHandSnapshot: event.state.hand,
             lastActionLabelByPlayer: {
               ...labelsBase,
