@@ -23,6 +23,10 @@ class HumanTurnError(Exception):
     pass
 
 
+# cumulative board size at the end of each street: flop / turn / river
+STREET_BOARD_SIZES = (3, 4, 5)
+
+
 @dataclass
 class GameSession:
     tournament_id: str
@@ -84,6 +88,33 @@ class GameSession:
 
         self.pending_human_action.set_result(ActionResult(action=action, amount=amount))
 
+    def _crossed_street_sizes(self, hand, board_before_len: int) -> list[int]:
+        """Which cumulative board sizes (flop/turn/river) this action revealed,
+        in order. Empty if the board didn't change; a single entry for a normal
+        one-street reveal; more than one only when nobody was left to act and
+        pokerkit dealt multiple remaining streets in this single call."""
+        new_len = len(hand.board_cards)
+        return [size for size in STREET_BOARD_SIZES if board_before_len < size <= new_len]
+
+    async def _reveal_board_in_stages(self, hand, crossed_sizes: list[int]) -> None:
+        """Broadcast each street this action revealed one at a time with a pause
+        between them, instead of the client seeing the whole runout at once.
+        Only called when more than one street was crossed by a single action
+        (see `_crossed_street_sizes`) -- the normal single-street case is
+        already shown by the caller's own `player_action` broadcast."""
+        board_after = hand.board_cards
+        for size in crossed_sizes:
+            await self.broadcast(
+                {
+                    "type": "board_dealt",
+                    "board_cards": board_after[:size],
+                    "state": state_mod.view_public(
+                        self.tournament, hand, self.human_player_id, board_cards_override=board_after[:size]
+                    ),
+                }
+            )
+            await asyncio.sleep(config.BOARD_REVEAL_DELAY_SECONDS)
+
     async def _run(self) -> None:
         try:
             while not self.tournament.is_over:
@@ -113,6 +144,7 @@ class GameSession:
                         except Exception:
                             result = ActionResult(action="fold", amount=None, message=None)
 
+                    board_before_len = len(hand.board_cards)
                     try:
                         self.tournament.apply_action(actor_id, result.action, result.amount)
                     except ActionError:
@@ -132,6 +164,14 @@ class GameSession:
                     )
                     audio_base64, audio_duration = audio if audio else (None, None)
 
+                    # if this action left nobody to decide anything (e.g.
+                    # everyone remaining is all-in), pokerkit deals every
+                    # remaining street in this single call -- don't show any of
+                    # those extra streets in this broadcast yet; they get
+                    # revealed one at a time below instead
+                    crossed_sizes = self._crossed_street_sizes(hand, board_before_len)
+                    board_override = board_before_len if len(crossed_sizes) > 1 else None
+
                     await self.broadcast(
                         {
                             "type": "player_action",
@@ -145,7 +185,14 @@ class GameSession:
                             "message": result.message,
                             "audio_base64": audio_base64,
                             "audio_duration": audio_duration,
-                            "state": state_mod.view_public(self.tournament, hand, self.human_player_id),
+                            "state": state_mod.view_public(
+                                self.tournament,
+                                hand,
+                                self.human_player_id,
+                                board_cards_override=hand.board_cards[:board_override]
+                                if board_override is not None
+                                else None,
+                            ),
                         }
                     )
 
@@ -153,6 +200,9 @@ class GameSession:
                     # playing (plus a beat), so the next action doesn't step on it
                     if audio_duration is not None:
                         await asyncio.sleep(audio_duration + config.AUDIO_TRAILING_DELAY_SECONDS)
+
+                    if len(crossed_sizes) > 1:
+                        await self._reveal_board_in_stages(hand, crossed_sizes)
 
                 net_results = self.tournament.finish_hand()
                 winners = [pid for pid, net in net_results.items() if net > 0]

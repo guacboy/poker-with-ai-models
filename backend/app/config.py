@@ -46,6 +46,12 @@ AUDIO_TRAILING_DELAY_SECONDS = float(os.getenv("AUDIO_TRAILING_DELAY_SECONDS", "
 # screen before dealing the next one.
 HAND_RESULT_DISPLAY_SECONDS = float(os.getenv("HAND_RESULT_DISPLAY_SECONDS", "10.0"))
 
+# When a single action leaves no more decisions to make (e.g. everyone left is
+# all-in) and pokerkit deals out multiple remaining streets at once, how long
+# to hold on each newly-revealed street before showing the next one, instead
+# of dumping the whole runout on screen in one shot.
+BOARD_REVEAL_DELAY_SECONDS = float(os.getenv("BOARD_REVEAL_DELAY_SECONDS", "3.0"))
+
 # Distinct built-in Kokoro voice per seat, for tell-apart-ability only (not
 # personality). See app/tts/kokoro_tts.py.
 VOICE_BY_PLAYER_ID: dict[str, str] = {

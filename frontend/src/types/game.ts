@@ -80,6 +80,7 @@ export type ServerEvent =
   | { type: "snapshot"; state: PublicState }
   | { type: "hand_started"; state: PublicState }
   | { type: "awaiting_action"; view: ActorView }
+  | { type: "board_dealt"; board_cards: string[]; state: PublicState }
   | {
       type: "player_action";
       player_id: string;

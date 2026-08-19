@@ -45,8 +45,10 @@ export function Seat({ seat, isHuman, speechMessage, positionClassName, bigBlind
     <div className={classes}>
       {speechMessage && <SpeechBubble message={speechMessage} />}
       <div className={`seat__cards${seat.isWinner ? " seat__cards--winner" : ""}`}>
-        <PlayingCard card={seat.holeCards?.[0]} hidden={!seat.holeCards} />
-        <PlayingCard card={seat.holeCards?.[1]} hidden={!seat.holeCards} />
+        {/* keying on the card itself forces a remount (and replays the reveal
+            animation) when a hidden slot becomes a dealt/shown card */}
+        <PlayingCard key={seat.holeCards?.[0] ?? "hidden-0"} card={seat.holeCards?.[0]} hidden={!seat.holeCards} />
+        <PlayingCard key={seat.holeCards?.[1] ?? "hidden-1"} card={seat.holeCards?.[1]} hidden={!seat.holeCards} />
       </div>
       <div className="seat__info">
         <div className="seat__name">

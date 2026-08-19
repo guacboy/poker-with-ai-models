@@ -58,16 +58,16 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
     };
   }, []);
 
-  const publicState = state.publicState;
-  if (!publicState) {
-    return <div className="loading-screen">Connecting…</div>;
-  }
-
   // while a just-finished hand's result is on screen, keep rendering its
   // frozen board/cards instead of publicState.hand, which goes null the
   // instant the hand ends
   const isHandResult = state.handResultWinners !== null;
-  const displayHand = isHandResult ? state.lastHandSnapshot : publicState.hand;
+  const displayHand = isHandResult ? state.lastHandSnapshot : state.publicState?.hand ?? null;
+
+  const publicState = state.publicState;
+  if (!publicState) {
+    return <div className="loading-screen">Connecting…</div>;
+  }
 
   const seats: SeatViewModel[] = publicState.players.map((player) => {
     const handSeat = displayHand?.seats.find((s) => s.player_id === player.player_id);

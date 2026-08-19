@@ -95,6 +95,10 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
           };
         case "awaiting_action":
           return { ...state, actorView: event.view };
+        case "board_dealt":
+          // a suspenseful runout stage (e.g. everyone's all-in) -- just
+          // refresh the board/seat snapshot, nothing else about the hand changed
+          return { ...state, publicState: event.state, lastHandSnapshot: event.state.hand };
         case "player_action": {
           const priorStreet = state.publicState?.hand?.street_index ?? null;
           const newStreet = event.state.hand?.street_index ?? null;

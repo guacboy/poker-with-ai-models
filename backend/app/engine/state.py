@@ -66,7 +66,13 @@ def view_for_actor(tournament: "Tournament", hand: "Hand", actor_id: str) -> dic
     }
 
 
-def view_public(tournament: "Tournament", hand: "Hand | None", viewer_id: str | None = None) -> dict:
+def view_public(
+    tournament: "Tournament",
+    hand: "Hand | None",
+    viewer_id: str | None = None,
+    *,
+    board_cards_override: list[str] | None = None,
+) -> dict:
     base = {
         "hand_count": tournament.hand_count,
         "blind_level": tournament.blind_level,
@@ -105,7 +111,11 @@ def view_public(tournament: "Tournament", hand: "Hand | None", viewer_id: str | 
         seats.append({**seat, "hole_cards": hole_cards})
 
     base["hand"] = {
-        "board_cards": hand.board_cards,
+        # lets the caller show fewer cards than pokerkit has actually already
+        # dealt internally -- used to stage a multi-street runout (all-in with
+        # no more actions left) as a suspenseful street-by-street reveal
+        # instead of dumping the whole board on the client at once
+        "board_cards": board_cards_override if board_cards_override is not None else hand.board_cards,
         "pot_total": hand.pot_total,
         "street_index": hand.street_index,
         "is_over": hand.is_over,

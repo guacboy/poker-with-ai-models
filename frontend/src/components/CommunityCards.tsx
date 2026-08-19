@@ -9,7 +9,11 @@ export function CommunityCards({ cards }: CommunityCardsProps) {
   return (
     <div className="community-cards">
       {slots.map((card, i) => (
-        <PlayingCard key={i} card={card} empty={!card} />
+        // keying on the card (not just the slot index) forces a remount the
+        // moment a slot goes from empty to dealt, which is what replays the
+        // reveal animation -- without it React just patches the same node in
+        // place and the card would pop in with no transition
+        <PlayingCard key={`${i}-${card ?? "empty"}`} card={card} empty={!card} />
       ))}
     </div>
   );

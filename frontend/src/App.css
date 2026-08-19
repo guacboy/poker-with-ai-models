@@ -102,6 +102,7 @@
 .community-cards {
   display: flex;
   gap: 6px;
+  perspective: 600px;
 }
 
 .pot-display {
@@ -151,6 +152,24 @@
 
 .playing-card__suit {
   font-size: 16px;
+}
+
+/* newly dealt-in cards (a fresh street of the board, or a hole card just
+   revealed at showdown) flip into place instead of just popping in, so a
+   suspenseful multi-street runout actually reads as a reveal */
+.playing-card:not(.playing-card--empty):not(.playing-card--back) {
+  animation: card-reveal 0.45s ease-out;
+}
+
+@keyframes card-reveal {
+  from {
+    transform: rotateY(90deg) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
 }
 
 /* ---------- Seats ---------- */

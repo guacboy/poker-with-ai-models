@@ -44,6 +44,26 @@ class AlwaysFoldPlayer:
         return ActionResult(action=action)
 
 
+class AlwaysShoveAllInPlayer:
+    """Shoves all-in the instant it's legal to raise; otherwise calls (which
+    pokerkit automatically caps to the remaining stack, i.e. also an all-in
+    once the stack is short); folding is never chosen. Used to deterministically
+    get every active seat all-in preflop, so betting closes with nobody left to
+    decide anything and pokerkit deals out the rest of the board in one shot."""
+
+    def __init__(self, player_id: str, display_name: str):
+        self.player_id = player_id
+        self.display_name = display_name
+
+    async def decide(self, view: dict) -> ActionResult:
+        legal = view["legal_actions"]
+        if legal["can_bet_or_raise"]:
+            return ActionResult(action="bet_or_raise_to", amount=legal["max_bet_to"])
+        if legal["can_check_or_call"]:
+            return ActionResult(action="check_or_call")
+        return ActionResult(action="fold")
+
+
 class StubPlayer:
     """A deterministic AI stub sharing one mutable flag across every seat:
     whichever seat is asked to decide first raises to the minimum (if legal),
@@ -291,3 +311,87 @@ async def test_fold_out_hand_result_reports_winner_hides_cards_and_waits_for_dis
     assert any(delay == pytest.approx(0.3) for delay in requested_sleeps), (
         f"expected a sleep call for the hand-result display delay, got {requested_sleeps}"
     )
+
+
+@pytest.mark.asyncio
+async def test_all_in_runout_reveals_streets_one_at_a_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When an action closes betting with nobody left to decide anything (e.g.
+    everyone still in the hand is all-in preflop), pokerkit deals the rest of
+    the board in a single call. The client must never see that as one jump --
+    each new street needs its own board_dealt broadcast, paced by
+    BOARD_REVEAL_DELAY_SECONDS, ending at the full 5-card board."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+    monkeypatch.setattr(config, "BOARD_REVEAL_DELAY_SECONDS", 0.2)
+
+    requested_sleeps: list[float] = []
+    real_sleep = asyncio.sleep
+
+    async def spying_sleep(delay: float, *args, **kwargs):
+        requested_sleeps.append(delay)
+        await real_sleep(min(delay, 0.01))
+
+    monkeypatch.setattr(asyncio, "sleep", spying_sleep)
+
+    session = GameSession.new("Dylan")
+    session.ai_players = {
+        p.id: AlwaysShoveAllInPlayer(p.id, p.name) for p in session.tournament.players if p.kind == "ai"
+    }
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await real_sleep(0.005)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            if legal.can_bet_or_raise:
+                session.submit_human_action("bet_or_raise_to", legal.max_bet_to)
+            else:
+                session.submit_human_action("check_or_call", None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    # give the loop task a scheduling turn to actually reach (and record) the
+    # staged board_dealt sleeps, same reasoning as the hand-result test above
+    await real_sleep(0.05)
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    board_dealt_events = [e for e in ws.events if e["type"] == "board_dealt"]
+    assert board_dealt_events, "expected the all-in runout to be staged"
+
+    board_lengths = [len(e["board_cards"]) for e in board_dealt_events]
+    assert board_lengths == sorted(board_lengths), "streets must be revealed in order"
+    assert board_lengths[-1] == 5, "the staged runout must end at the full board"
+    assert all(n in (3, 4, 5) for n in board_lengths), f"unexpected board sizes: {board_lengths}"
+
+    # every board_dealt event (except possibly the very last, whose trailing
+    # sleep may not have been scheduled yet if we caught the loop mid-hand)
+    # was followed by the reveal delay
+    reveal_sleeps = [d for d in requested_sleeps if d == pytest.approx(0.2)]
+    assert len(reveal_sleeps) >= len(board_dealt_events) - 1
+
+    # the *combined* sequence of board sizes across every broadcast (not just
+    # board_dealt) must never skip a street -- no single event may jump the
+    # board from one size straight to a later, non-adjacent size
+    seen_sizes: list[int] = []
+    for event in ws.events:
+        if event["type"] == "player_action":
+            hand = event["state"]["hand"]
+            size = len(hand["board_cards"]) if hand else 0
+        elif event["type"] == "board_dealt":
+            size = len(event["board_cards"])
+        else:
+            continue
+        if not seen_sizes or seen_sizes[-1] != size:
+            seen_sizes.append(size)
+
+    allowed_transitions = {(0, 3), (3, 4), (4, 5)}
+    for before, after in zip(seen_sizes, seen_sizes[1:]):
+        if after > before:
+            assert (before, after) in allowed_transitions, (
+                f"board jumped from {before} to {after} cards in one broadcast -- "
+                f"full sequence was {seen_sizes}"
+            )
