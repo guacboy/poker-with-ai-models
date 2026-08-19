@@ -98,6 +98,7 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
           speechMessages={speechMessages}
           boardCards={publicState.hand?.board_cards ?? []}
           potTotal={publicState.hand?.pot_total ?? 0}
+          bigBlind={publicState.big_blind}
         />
 
         <ActionControls

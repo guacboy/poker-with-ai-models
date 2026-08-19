@@ -17,14 +17,22 @@ interface TableProps {
   speechMessages: Record<string, string | null>;
   boardCards: string[];
   potTotal: number;
+  bigBlind: number;
 }
 
-export function Table({ seats, humanPlayerId, speechMessages, boardCards, potTotal }: TableProps) {
+export function Table({
+  seats,
+  humanPlayerId,
+  speechMessages,
+  boardCards,
+  potTotal,
+  bigBlind,
+}: TableProps) {
   return (
     <div className="table-felt">
       <div className="table-center">
         <CommunityCards cards={boardCards} />
-        <PotDisplay potTotal={potTotal} />
+        <PotDisplay potTotal={potTotal} bigBlind={bigBlind} />
       </div>
       {seats.map((seat, i) => (
         <Seat
@@ -33,6 +41,7 @@ export function Table({ seats, humanPlayerId, speechMessages, boardCards, potTot
           isHuman={seat.playerId === humanPlayerId}
           speechMessage={speechMessages[seat.playerId] ?? null}
           positionClassName={POSITION_CLASSES[i % POSITION_CLASSES.length]}
+          bigBlind={bigBlind}
         />
       ))}
     </div>

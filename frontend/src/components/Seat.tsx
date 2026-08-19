@@ -1,6 +1,7 @@
 import { PlayingCard } from "./PlayingCard";
 import { SpeechBubble } from "./SpeechBubble";
 import type { PlayerKind, PlayerStatus } from "../types/game";
+import { formatBB } from "../utils/formatChips";
 
 export interface SeatViewModel {
   playerId: string;
@@ -25,9 +26,10 @@ interface SeatProps {
   isHuman: boolean;
   speechMessage: string | null;
   positionClassName: string;
+  bigBlind: number;
 }
 
-export function Seat({ seat, isHuman, speechMessage, positionClassName }: SeatProps) {
+export function Seat({ seat, isHuman, speechMessage, positionClassName, bigBlind }: SeatProps) {
   const classes = [
     "seat",
     positionClassName,
@@ -51,7 +53,7 @@ export function Seat({ seat, isHuman, speechMessage, positionClassName }: SeatPr
           {isHuman && <span className="seat__you-tag">you</span>}
         </div>
         {seat.lastActionLabel && <div className="seat__last-action">{seat.lastActionLabel}</div>}
-        <div className="seat__stack">{seat.stack.toLocaleString()}</div>
+        <div className="seat__stack">{formatBB(seat.stack, bigBlind)}</div>
         <div className="seat__badges">
           {seat.isButton && <span className="badge badge--button">D</span>}
           {seat.isSmallBlind && <span className="badge badge--blind">SB</span>}
@@ -62,7 +64,7 @@ export function Seat({ seat, isHuman, speechMessage, positionClassName }: SeatPr
         </div>
         {seat.status === "eliminated" && <div className="seat__eliminated-tag">Eliminated</div>}
       </div>
-      {seat.bet > 0 && <div className="seat__bet-chip">{seat.bet.toLocaleString()}</div>}
+      {seat.bet > 0 && <div className="seat__bet-chip">{formatBB(seat.bet, bigBlind)}</div>}
     </div>
   );
 }

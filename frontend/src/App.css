@@ -371,10 +371,9 @@
   padding: 4px 6px;
 }
 
-.action-controls__raise-bb {
+.action-controls__unit {
   font-size: 13px;
   color: var(--text-dim);
-  min-width: 48px;
 }
 
 .action-controls__buttons {
