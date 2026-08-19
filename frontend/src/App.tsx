@@ -89,39 +89,41 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
 
   return (
     <div className="game-screen">
-      <TournamentStatus
-        handCount={publicState.hand_count}
-        smallBlind={publicState.small_blind}
-        bigBlind={publicState.big_blind}
-        handsUntilNextLevel={publicState.hands_until_next_level}
-        players={publicState.players}
-        humanPlayerId={humanPlayerId}
-      />
+      <div className="game-main">
+        <TournamentStatus
+          handCount={publicState.hand_count}
+          smallBlind={publicState.small_blind}
+          bigBlind={publicState.big_blind}
+          handsUntilNextLevel={publicState.hands_until_next_level}
+          players={publicState.players}
+          humanPlayerId={humanPlayerId}
+        />
 
-      <Table
-        seats={seats}
-        humanPlayerId={humanPlayerId}
-        speechMessages={speechMessages}
-        boardCards={publicState.hand?.board_cards ?? []}
-        potTotal={publicState.hand?.pot_total ?? 0}
-      />
+        <Table
+          seats={seats}
+          humanPlayerId={humanPlayerId}
+          speechMessages={speechMessages}
+          boardCards={publicState.hand?.board_cards ?? []}
+          potTotal={publicState.hand?.pot_total ?? 0}
+        />
 
-      <ActionControls
-        legalActions={isMyTurn ? state.actorView!.legal_actions : null}
-        onAction={(action, amount) => {
-          submitAction(action, amount).catch((err) => console.error(err));
-        }}
-      />
+        <ActionControls
+          legalActions={isMyTurn ? state.actorView!.legal_actions : null}
+          onAction={(action, amount) => {
+            submitAction(action, amount).catch((err) => console.error(err));
+          }}
+        />
 
-      {state.tournamentOver && (
-        <div className="tournament-over-banner">
-          {state.winnerPlayerId
-            ? `${publicState.players.find((p) => p.player_id === state.winnerPlayerId)?.name ?? "Someone"} wins the tournament!`
-            : "Tournament over."}
-        </div>
-      )}
+        {state.tournamentOver && (
+          <div className="tournament-over-banner">
+            {state.winnerPlayerId
+              ? `${publicState.players.find((p) => p.player_id === state.winnerPlayerId)?.name ?? "Someone"} wins the tournament!`
+              : "Tournament over."}
+          </div>
+        )}
 
-      {state.error && <div className="error-banner">{state.error}</div>}
+        {state.error && <div className="error-banner">{state.error}</div>}
+      </div>
 
       <HandHistoryLog entries={state.log} />
     </div>

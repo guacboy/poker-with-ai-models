@@ -51,11 +51,22 @@
 
 .game-screen {
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  min-height: 100svh;
+}
+
+.game-main {
+  display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  padding: 12px;
-  min-height: 100svh;
+  flex: 1 1 auto;
 }
 
 .tournament-status {
@@ -76,8 +87,9 @@
 .table-felt {
   position: relative;
   width: min(920px, 96vw);
-  height: min(520px, 62vh);
-  min-height: 380px;
+  height: min(480px, 56vh);
+  min-height: 360px;
+  margin-top: 48px;
   border-radius: 50%;
   background: radial-gradient(ellipse at center, #1d5c3a 0%, #123c26 70%, #0d2c1c 100%);
   border: 10px solid #4b2f1a;
@@ -171,15 +183,15 @@
 }
 .seat-pos-2 {
   left: 88%;
-  top: 26%;
+  top: 30%;
 }
 .seat-pos-3 {
   left: 50%;
-  top: 12%;
+  top: 18%;
 }
 .seat-pos-4 {
   left: 12%;
-  top: 26%;
+  top: 30%;
 }
 .seat-pos-5 {
   left: 12%;
@@ -405,8 +417,10 @@
 /* ---------- Hand history log ---------- */
 
 .hand-history-log {
-  width: min(920px, 96vw);
-  max-height: 140px;
+  width: 260px;
+  flex: 0 0 auto;
+  align-self: stretch;
+  max-height: none;
   overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -414,6 +428,14 @@
   padding: 8px 12px;
   font-size: 13px;
   color: var(--text-dim);
+}
+
+@media (max-width: 900px) {
+  .hand-history-log {
+    width: min(920px, 96vw);
+    max-height: 140px;
+    align-self: center;
+  }
 }
 
 .hand-history-log__entry {
