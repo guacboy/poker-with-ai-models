@@ -312,7 +312,7 @@
   max-width: 160px;
   text-align: center;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  animation: bubble-in 0.15s ease-out;
+  animation: bubble-in-top 0.15s ease-out;
   z-index: 5;
 }
 
@@ -325,7 +325,54 @@
   border-top-color: white;
 }
 
-@keyframes bubble-in {
+/* Left-side seats: bubble sits to the left of the seat, tail points right at it */
+.seat-pos-4 .speech-bubble,
+.seat-pos-5 .speech-bubble {
+  bottom: auto;
+  top: 50%;
+  left: auto;
+  right: 100%;
+  transform: translateY(-50%);
+  margin-bottom: 0;
+  margin-right: 10px;
+  animation-name: bubble-in-left;
+}
+
+.seat-pos-4 .speech-bubble__tail,
+.seat-pos-5 .speech-bubble__tail {
+  top: 50%;
+  left: 100%;
+  bottom: auto;
+  transform: translateY(-50%);
+  border-top-color: transparent;
+  border-left-color: white;
+}
+
+/* Right-side seats: bubble sits to the right of the seat, tail points left at it */
+.seat-pos-1 .speech-bubble,
+.seat-pos-2 .speech-bubble {
+  bottom: auto;
+  top: 50%;
+  left: 100%;
+  right: auto;
+  transform: translateY(-50%);
+  margin-bottom: 0;
+  margin-left: 10px;
+  animation-name: bubble-in-right;
+}
+
+.seat-pos-1 .speech-bubble__tail,
+.seat-pos-2 .speech-bubble__tail {
+  top: 50%;
+  right: 100%;
+  left: auto;
+  bottom: auto;
+  transform: translateY(-50%);
+  border-top-color: transparent;
+  border-right-color: white;
+}
+
+@keyframes bubble-in-top {
   from {
     opacity: 0;
     transform: translateX(-50%) translateY(4px);
@@ -333,6 +380,28 @@
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes bubble-in-left {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+@keyframes bubble-in-right {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
   }
 }
 
