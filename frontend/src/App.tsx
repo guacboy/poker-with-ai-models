@@ -7,13 +7,16 @@ import { TournamentStatus } from "./components/TournamentStatus";
 import { useAudioQueue } from "./hooks/useAudioQueue";
 import { createTournament, useGameSocket } from "./hooks/useGameSocket";
 
-const SPEECH_BUBBLE_DURATION_MS = 4500;
+// Fallback when there's no audio duration to go on (e.g. TTS isn't downloaded).
+const FALLBACK_SPEECH_BUBBLE_DURATION_MS = 4500;
+// Matches the backend's AUDIO_TRAILING_DELAY_SECONDS default -- how much
+// longer the line lingers on screen after it finishes playing.
+const AUDIO_TRAILING_DELAY_MS = 1000;
 
 function StartScreen({ onStart }: { onStart: () => void }) {
   return (
     <div className="start-screen">
       <h1>AI Poker Table</h1>
-      <p>No-Limit Hold'em, 6-max, against Claude, OpenAI, DeepSeek, Gemini, and Grok.</p>
       <button onClick={onStart}>Start Tournament</button>
     </div>
   );
@@ -31,11 +34,16 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
     if (!action) return;
 
     if (action.message) {
+      const displayMs =
+        action.audioDuration != null
+          ? action.audioDuration * 1000 + AUDIO_TRAILING_DELAY_MS
+          : FALLBACK_SPEECH_BUBBLE_DURATION_MS;
+
       setSpeechMessages((prev) => ({ ...prev, [action.playerId]: action.message }));
       clearTimeout(timeoutsRef.current[action.playerId]);
       timeoutsRef.current[action.playerId] = setTimeout(() => {
         setSpeechMessages((prev) => ({ ...prev, [action.playerId]: null }));
-      }, SPEECH_BUBBLE_DURATION_MS);
+      }, displayMs);
     }
 
     if (action.audioBase64) {

@@ -88,6 +88,7 @@ export type ServerEvent =
       call_amount: number;
       message: string | null;
       audio_base64: string | null;
+      audio_duration: number | null;
       state: PublicState;
     }
   | {

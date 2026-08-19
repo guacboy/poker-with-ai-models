@@ -48,15 +48,18 @@ def _samples_to_wav_base64(samples: np.ndarray, sample_rate: int) -> str:
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def _synthesize_sync(text: str, voice: str) -> Optional[str]:
+def _synthesize_sync(text: str, voice: str) -> Optional[tuple[str, float]]:
     kokoro = _get_kokoro()
     if kokoro is None:
         return None
     samples, sample_rate = kokoro.create(text, voice=voice, speed=1.0, lang="en-us")
-    return _samples_to_wav_base64(samples, sample_rate)
+    duration_seconds = len(samples) / sample_rate
+    return _samples_to_wav_base64(samples, sample_rate), duration_seconds
 
 
-async def synthesize(text: str, voice: str) -> str | None:
-    """Returns base64-encoded WAV audio for `text`, or None if the model isn't
-    downloaded yet. Synthesis is CPU-bound, so it runs off the event loop."""
+async def synthesize(text: str, voice: str) -> tuple[str, float] | None:
+    """Returns (base64-encoded WAV audio, duration in seconds) for `text`, or
+    None if the model isn't downloaded yet. The duration is what lets the game
+    loop pace itself around how long the line actually takes to play, not just
+    a guess. Synthesis is CPU-bound, so it runs off the event loop."""
     return await asyncio.to_thread(_synthesize_sync, text, voice)

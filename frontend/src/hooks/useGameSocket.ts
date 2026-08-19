@@ -12,6 +12,7 @@ export interface PlayerActionEvent {
   amount: number | null;
   message: string | null;
   audioBase64: string | null;
+  audioDuration: number | null;
 }
 
 interface GameSocketState {
@@ -120,6 +121,7 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
               amount: event.amount,
               message: event.message,
               audioBase64: event.audio_base64,
+              audioDuration: event.audio_duration,
             },
           };
         }

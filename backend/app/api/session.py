@@ -125,7 +125,12 @@ class GameSession:
                     if not is_talk_eligible(result.action, view):
                         result.message = None
 
-                    audio_base64 = await synthesize(result.message, config.VOICE_BY_PLAYER_ID.get(actor_id, "")) if result.message else None
+                    audio = (
+                        await synthesize(result.message, config.VOICE_BY_PLAYER_ID.get(actor_id, ""))
+                        if result.message
+                        else None
+                    )
+                    audio_base64, audio_duration = audio if audio else (None, None)
 
                     await self.broadcast(
                         {
@@ -139,9 +144,15 @@ class GameSession:
                             "call_amount": view["legal_actions"]["call_amount"],
                             "message": result.message,
                             "audio_base64": audio_base64,
+                            "audio_duration": audio_duration,
                             "state": state_mod.view_public(self.tournament, hand, self.human_player_id),
                         }
                     )
+
+                    # hold on this turn until the line has actually finished
+                    # playing (plus a beat), so the next action doesn't step on it
+                    if audio_duration is not None:
+                        await asyncio.sleep(audio_duration + config.AUDIO_TRAILING_DELAY_SECONDS)
 
                 net_results = self.tournament.finish_hand()
                 await self.broadcast(

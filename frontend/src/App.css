@@ -11,11 +11,6 @@
   padding: 24px;
 }
 
-.start-screen p {
-  color: var(--text-dim);
-  max-width: 420px;
-}
-
 .start-screen button {
   background: var(--accent);
   color: white;

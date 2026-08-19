@@ -6,7 +6,26 @@ import pytest
 
 from app import config
 from app.ai.base import ActionResult
+from app.api import session as session_module
 from app.api.session import GameSession, HumanTurnError
+
+
+class AlwaysRaiseWithMessagePlayer:
+    """Every AI seat raises (or calls, if raising isn't legal) and always
+    attaches a message -- raising is always talk-eligible, so this reliably
+    triggers the post-dialog pacing delay without depending on randomness."""
+
+    def __init__(self, player_id: str, display_name: str):
+        self.player_id = player_id
+        self.display_name = display_name
+
+    async def decide(self, view: dict) -> ActionResult:
+        legal = view["legal_actions"]
+        if legal["can_bet_or_raise"]:
+            return ActionResult(action="bet_or_raise_to", amount=legal["min_bet_to"], message="hi")
+        if legal["can_check_or_call"]:
+            return ActionResult(action="check_or_call", message="hi")
+        return ActionResult(action="fold", message="hi")
 
 
 class StubPlayer:
@@ -128,3 +147,64 @@ async def test_submit_human_action_rejects_illegal_action_without_consuming_turn
     session.task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await session.task
+
+
+@pytest.mark.asyncio
+async def test_pacing_waits_for_audio_duration_plus_trailing_delay(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """After a spoken line, the loop should sleep for (audio duration +
+    AUDIO_TRAILING_DELAY_SECONDS) before moving to the next actor, not just
+    the flat AI_THINKING_DELAY_SECONDS pacing used before every decision."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+    monkeypatch.setattr(config, "AUDIO_TRAILING_DELAY_SECONDS", 0.4)
+
+    fake_duration = 0.3
+    requested_sleeps: list[float] = []
+    real_sleep = asyncio.sleep
+
+    async def fake_synthesize(text: str, voice: str):
+        return "fakebase64", fake_duration
+
+    async def spying_sleep(delay: float, *args, **kwargs):
+        requested_sleeps.append(delay)
+        # cap the actual wait so the test doesn't really sit through 0.7s+ per action
+        await real_sleep(min(delay, 0.01))
+
+    monkeypatch.setattr(session_module, "synthesize", fake_synthesize)
+    monkeypatch.setattr(asyncio, "sleep", spying_sleep)
+
+    session = GameSession.new("Dylan")
+    session.ai_players = {
+        p.id: AlwaysRaiseWithMessagePlayer(p.id, p.name)
+        for p in session.tournament.players
+        if p.kind == "ai"
+    }
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await real_sleep(0.005)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            hand = session.tournament.current_hand
+            action = "check_or_call" if hand.legal_actions().can_check_or_call else "fold"
+            session.submit_human_action(action, None)
+        if session.tournament.hand_count >= 1:
+            break
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    player_actions = [e for e in ws.events if e["type"] == "player_action"]
+    talking_actions = [e for e in player_actions if e["message"] is not None]
+    assert talking_actions, "expected at least one AI action to carry a message"
+    for event in talking_actions:
+        assert event["audio_duration"] == pytest.approx(fake_duration)
+
+    expected_wait = fake_duration + 0.4
+    assert any(delay == pytest.approx(expected_wait) for delay in requested_sleeps), (
+        f"expected a sleep call for ~{expected_wait}s (audio + trailing delay), "
+        f"got {requested_sleeps}"
+    )
