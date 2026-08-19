@@ -312,6 +312,59 @@ async def test_fold_out_hand_result_reports_winner_hides_cards_and_waits_for_dis
         f"expected a sleep call for the hand-result display delay, got {requested_sleeps}"
     )
 
+    # a walk never reaches showdown -- there's no hand to name a category for
+    assert result["winning_hand_label"] is None
+
+
+@pytest.mark.asyncio
+async def test_showdown_hand_result_names_the_winning_hand_category(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A hand that actually reaches showdown (forced here by shoving everyone
+    all-in preflop) should report a real pokerkit hand-category label for the
+    winning hand, e.g. "Straight flush" -- not just who won."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+    monkeypatch.setattr(config, "BOARD_REVEAL_DELAY_SECONDS", 0.01)
+    monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.01)
+
+    session = GameSession.new("Dylan")
+    session.ai_players = {
+        p.id: AlwaysShoveAllInPlayer(p.id, p.name) for p in session.tournament.players if p.kind == "ai"
+    }
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await asyncio.sleep(0.01)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            if legal.can_bet_or_raise:
+                session.submit_human_action("bet_or_raise_to", legal.max_bet_to)
+            else:
+                session.submit_human_action("check_or_call", None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    hand_results = [e for e in ws.events if e["type"] == "hand_result"]
+    assert hand_results, "expected a hand_result event"
+    label = hand_results[0]["winning_hand_label"]
+
+    valid_labels = {
+        "High card",
+        "One pair",
+        "Two pair",
+        "Three of a kind",
+        "Straight",
+        "Flush",
+        "Full house",
+        "Four of a kind",
+        "Straight flush",
+    }
+    assert label in valid_labels, f"expected a real hand category, got {label!r}"
+
 
 @pytest.mark.asyncio
 async def test_all_in_runout_reveals_streets_one_at_a_time(monkeypatch: pytest.MonkeyPatch) -> None:

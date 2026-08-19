@@ -122,6 +122,7 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
           boardCards={displayHand?.board_cards ?? []}
           potTotal={displayHand?.pot_total ?? 0}
           bigBlind={publicState.big_blind}
+          winningHandLabel={state.winningHandLabel}
         />
 
         <ActionControls

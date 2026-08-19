@@ -18,6 +18,7 @@ interface TableProps {
   boardCards: string[];
   potTotal: number;
   bigBlind: number;
+  winningHandLabel: string | null;
 }
 
 export function Table({
@@ -27,11 +28,13 @@ export function Table({
   boardCards,
   potTotal,
   bigBlind,
+  winningHandLabel,
 }: TableProps) {
   return (
     <div className="table-felt">
       <div className="table-center">
         <CommunityCards cards={boardCards} />
+        {winningHandLabel && <div className="winning-hand-label">{winningHandLabel}</div>}
         <PotDisplay potTotal={potTotal} bigBlind={bigBlind} />
       </div>
       {seats.map((seat, i) => (

@@ -33,6 +33,10 @@ interface GameSocketState {
   // set for the HAND_RESULT_DISPLAY_SECONDS window after a hand ends; null
   // once the next hand starts
   handResultWinners: string[] | null;
+  // the winning hand's pokerkit category (e.g. "Straight flush"), only set
+  // when the hand actually reached a showdown; null for a fold-out win or
+  // once the next hand starts
+  winningHandLabel: string | null;
 }
 
 type Action =
@@ -51,6 +55,7 @@ const initialState: GameSocketState = {
   error: null,
   lastHandSnapshot: null,
   handResultWinners: null,
+  winningHandLabel: null,
 };
 
 function formatActionLabel(
@@ -98,6 +103,7 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
             lastActionLabelByPlayer: {},
             lastHandSnapshot: event.state.hand,
             handResultWinners: null,
+            winningHandLabel: null,
           };
         case "awaiting_action":
           return { ...state, actorView: event.view };
@@ -158,7 +164,12 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
           // event.state.hand is always null here (the hand just finished) --
           // keep the frozen lastHandSnapshot from the final player_action so
           // the board/cards stay on screen through the result display window
-          return { ...state, publicState: event.state, handResultWinners: event.winners };
+          return {
+            ...state,
+            publicState: event.state,
+            handResultWinners: event.winners,
+            winningHandLabel: event.winning_hand_label,
+          };
         case "tournament_over":
           return { ...state, tournamentOver: true, winnerPlayerId: event.winner_player_id };
         case "error":

@@ -96,6 +96,7 @@ export type ServerEvent =
       type: "hand_result";
       net_results: Record<string, number>;
       winners: string[];
+      winning_hand_label: string | null;
       bust_events: BustEvent[];
       state: PublicState;
     }

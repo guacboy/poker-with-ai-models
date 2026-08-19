@@ -173,6 +173,15 @@ class Hand:
             revealed[player_id] = [_card_str(c) for c in cards]
         return revealed
 
+    def winning_hand_label(self, player_id: str) -> str | None:
+        """The pokerkit hand-category label (e.g. "Straight flush", "Two
+        pair") for `player_id`'s best 5-card hand this hand, using their hole
+        cards plus the current board. None if it can't be evaluated (not
+        enough board cards yet, or they're not still in contention)."""
+        idx = self.seat_player_ids.index(player_id)
+        hand = self.state.get_hand(idx, 0, 0)
+        return hand.entry.label.value if hand is not None else None
+
     def final_stacks(self) -> dict[str, int]:
         return dict(zip(self.seat_player_ids, self.state.stacks))
 

@@ -5,7 +5,7 @@ values to decide which player implementation to instantiate per seat.
 """
 
 # TODO(feat): add profile pictures for the bots in assets/png/
-# TODO(feat): add what type of win it was below the community cards (e.g., Straight flush)
+# TODO(chore): expand the left and right-side speech bubbbles so the dialogue doesn't appear so crammed
 
 from __future__ import annotations
 

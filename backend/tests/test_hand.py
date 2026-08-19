@@ -52,6 +52,43 @@ def test_fold_out_win_reveals_no_hole_cards():
     assert hand.revealed_hole_cards() == {}
 
 
+def test_winning_hand_label_is_a_real_category_at_showdown():
+    t = make_tournament()
+    hand = t.start_hand()
+
+    # nobody folds -- forces a real showdown, regardless of what's dealt
+    while not hand.is_over:
+        actor_id = hand.current_actor_id
+        legal = hand.legal_actions()
+        action = "check_or_call" if legal.can_check_or_call else "fold"
+        t.apply_action(actor_id, action)
+
+    winner_id = next(pid for pid, net in hand.net_results().items() if net > 0)
+    label = hand.winning_hand_label(winner_id)
+
+    valid_labels = {
+        "High card",
+        "One pair",
+        "Two pair",
+        "Three of a kind",
+        "Straight",
+        "Flush",
+        "Full house",
+        "Four of a kind",
+        "Straight flush",
+    }
+    assert label in valid_labels
+
+
+def test_winning_hand_label_is_none_for_a_player_no_longer_in_contention():
+    t = make_tournament()
+    hand = t.start_hand()
+    folded_pid = hand.current_actor_id
+    t.apply_action(folded_pid, "fold")
+
+    assert hand.winning_hand_label(folded_pid) is None
+
+
 def test_dealt_hole_cards_of_survives_folding():
     """pokerkit clears a player's hole_cards from its own state the instant
     they fold (mucking) -- hole_cards_of documents that, but a viewer should

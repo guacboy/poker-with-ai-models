@@ -206,11 +206,27 @@ class GameSession:
 
                 net_results = self.tournament.finish_hand()
                 winners = [pid for pid, net in net_results.items() if net > 0]
+
+                # only a real showdown has a "type of hand" worth announcing --
+                # a fold-out win never reveals cards, so there's nothing to
+                # evaluate (revealed_hole_cards is the same signal the client
+                # already uses to decide whether cards were shown at all)
+                revealed = hand.revealed_hole_cards()
+                winning_hand_label = next(
+                    (
+                        hand.winning_hand_label(pid)
+                        for pid in winners
+                        if pid in revealed
+                    ),
+                    None,
+                )
+
                 await self.broadcast(
                     {
                         "type": "hand_result",
                         "net_results": net_results,
                         "winners": winners,
+                        "winning_hand_label": winning_hand_label,
                         "bust_events": self.tournament.last_bust_events,
                         "state": state_mod.view_public(self.tournament, None, self.human_player_id),
                     }
