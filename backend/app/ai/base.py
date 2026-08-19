@@ -94,9 +94,11 @@ Seats:
 
 Legal actions: {', '.join(legal_lines)}
 
-Decide your action. Optionally include a short (<= {MAX_MESSAGE_WORDS} words) trash-talk \
-message reacting to the situation -- it will be read aloud to the table. Leave it null \
-if you'd rather stay quiet this time.
+Decide your action. You may only include a short (<= {MAX_MESSAGE_WORDS} words) trash-talk \
+message if you end up folding, raising/re-raising (including shoving all-in), or calling an \
+opponent's bet or raise -- it will be read aloud to the table. Leave it null for a plain check \
+or a call that isn't over a bet/raise (e.g. limping in for just the blind); messages on those \
+actions are discarded anyway.
 """
 
 
@@ -106,3 +108,32 @@ def clamp_amount(view: dict, amount: int | None) -> int | None:
     if amount is None or legal["min_bet_to"] is None or legal["max_bet_to"] is None:
         return amount
     return max(legal["min_bet_to"], min(legal["max_bet_to"], amount))
+
+
+def facing_a_raise(view: dict) -> bool:
+    """Whether calling right now means calling an actual raise, as opposed to
+    just matching the unraised big blind (limping in) preflop. Postflop there's
+    no blind baseline, so any nonzero call_amount is inherently over a real bet."""
+    legal = view["legal_actions"]
+    if legal["call_amount"] <= 0:
+        return False
+    if view["street_index"] != 0:
+        return True
+    own_bet = next(s["bet"] for s in view["seats"] if s["player_id"] == view["your_player_id"])
+    current_bet_level = own_bet + legal["call_amount"]
+    return current_bet_level > view["big_blind"]
+
+
+def is_talk_eligible(action: str, view: dict) -> bool:
+    """Whether an action is allowed to carry a spoken trash-talk message.
+
+    Talk is limited to meaningful moments: folding, raising/re-raising (which
+    covers shoving all-in -- that's just a bet/raise for the player's whole
+    stack), and calling an actual raise. A free check, or a call that's really
+    just posting/limping for the unraised blind, stays silent.
+    """
+    if action in ("fold", "bet_or_raise_to"):
+        return True
+    if action == "check_or_call":
+        return facing_a_raise(view)
+    return False

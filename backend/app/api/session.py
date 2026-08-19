@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from fastapi import WebSocket
 
 from .. import config
-from ..ai.base import ActionResult, clamp_amount
+from ..ai.base import ActionResult, clamp_amount, is_talk_eligible
 from ..ai.factory import create_ai_player
 from ..engine import state as state_mod
 from ..engine.tournament import ActionError, Tournament
@@ -128,6 +128,9 @@ class GameSession:
                         fallback = "check_or_call" if legal.can_check_or_call else "fold"
                         self.tournament.apply_action(actor_id, fallback, None)
                         result = ActionResult(action=fallback, amount=None, message=None)
+
+                    if not is_talk_eligible(result.action, view):
+                        result.message = None
 
                     audio_base64 = await synthesize(result.message, config.VOICE_BY_PLAYER_ID.get(actor_id, "")) if result.message else None
 
