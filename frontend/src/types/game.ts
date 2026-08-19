@@ -94,6 +94,7 @@ export type ServerEvent =
   | {
       type: "hand_result";
       net_results: Record<string, number>;
+      winners: string[];
       bust_events: BustEvent[];
       state: PublicState;
     }

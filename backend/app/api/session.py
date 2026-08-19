@@ -155,14 +155,20 @@ class GameSession:
                         await asyncio.sleep(audio_duration + config.AUDIO_TRAILING_DELAY_SECONDS)
 
                 net_results = self.tournament.finish_hand()
+                winners = [pid for pid, net in net_results.items() if net > 0]
                 await self.broadcast(
                     {
                         "type": "hand_result",
                         "net_results": net_results,
+                        "winners": winners,
                         "bust_events": self.tournament.last_bust_events,
                         "state": state_mod.view_public(self.tournament, None, self.human_player_id),
                     }
                 )
+
+                # give the table a beat to see who won (and their hand, if it
+                # went to showdown) before the next hand is dealt
+                await asyncio.sleep(config.HAND_RESULT_DISPLAY_SECONDS)
 
             await self.broadcast(
                 {

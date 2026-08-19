@@ -28,6 +28,22 @@ class AlwaysRaiseWithMessagePlayer:
         return ActionResult(action="fold", message="hi")
 
 
+class AlwaysFoldPlayer:
+    """Folds whenever folding is actually legal (i.e. there's a real bet to
+    get away from); checks otherwise, since pokerkit disallows folding when
+    there's nothing to call. Used to deterministically drive a hand to a
+    fold-out win with no showdown."""
+
+    def __init__(self, player_id: str, display_name: str):
+        self.player_id = player_id
+        self.display_name = display_name
+
+    async def decide(self, view: dict) -> ActionResult:
+        legal = view["legal_actions"]
+        action = "fold" if legal["can_fold"] else "check_or_call"
+        return ActionResult(action=action)
+
+
 class StubPlayer:
     """A deterministic AI stub sharing one mutable flag across every seat:
     whichever seat is asked to decide first raises to the minimum (if legal),
@@ -207,4 +223,71 @@ async def test_pacing_waits_for_audio_duration_plus_trailing_delay(
     assert any(delay == pytest.approx(expected_wait) for delay in requested_sleeps), (
         f"expected a sleep call for ~{expected_wait}s (audio + trailing delay), "
         f"got {requested_sleeps}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_fold_out_hand_result_reports_winner_hides_cards_and_waits_for_display_delay(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A hand everyone folds out of (a walk) should: name exactly one winner
+    in the hand_result event, never reveal that winner's (or anyone else's)
+    hole cards since there was no showdown, and hold the table on the result
+    for HAND_RESULT_DISPLAY_SECONDS before the loop would deal the next hand."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+    monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.3)
+
+    requested_sleeps: list[float] = []
+    real_sleep = asyncio.sleep
+
+    async def spying_sleep(delay: float, *args, **kwargs):
+        requested_sleeps.append(delay)
+        # cap the actual wait so the test doesn't really sit through 0.3s+
+        await real_sleep(min(delay, 0.01))
+
+    monkeypatch.setattr(asyncio, "sleep", spying_sleep)
+
+    session = GameSession.new("Dylan")
+    session.ai_players = {
+        p.id: AlwaysFoldPlayer(p.id, p.name) for p in session.tournament.players if p.kind == "ai"
+    }
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await real_sleep(0.005)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            action = "fold" if legal.can_fold else "check_or_call"
+            session.submit_human_action(action, None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    # give the loop task a scheduling turn to actually reach (and record) the
+    # post-result sleep, which is the very next statement after the broadcast
+    await real_sleep(0.05)
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    hand_results = [e for e in ws.events if e["type"] == "hand_result"]
+    assert hand_results, "expected a hand_result event"
+    result = hand_results[0]
+
+    assert len(result["winners"]) == 1
+    winner_id = result["winners"][0]
+    assert result["net_results"][winner_id] > 0
+    assert winner_id != config.HUMAN_PLAYER_ID, "everyone else folded around to a single AI seat"
+
+    # a walk never reaches showdown -- the winner's cards stay hidden, same as
+    # everyone else's, in the last broadcast before the hand ended
+    player_actions = [e for e in ws.events if e["type"] == "player_action"]
+    last_state_hand = player_actions[-1]["state"]["hand"]
+    winner_seat = next(s for s in last_state_hand["seats"] if s["player_id"] == winner_id)
+    assert winner_seat["hole_cards"] is None
+
+    assert any(delay == pytest.approx(0.3) for delay in requested_sleeps), (
+        f"expected a sleep call for the hand-result display delay, got {requested_sleeps}"
     )

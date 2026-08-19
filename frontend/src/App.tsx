@@ -63,8 +63,14 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
     return <div className="loading-screen">Connecting…</div>;
   }
 
+  // while a just-finished hand's result is on screen, keep rendering its
+  // frozen board/cards instead of publicState.hand, which goes null the
+  // instant the hand ends
+  const isHandResult = state.handResultWinners !== null;
+  const displayHand = isHandResult ? state.lastHandSnapshot : publicState.hand;
+
   const seats: SeatViewModel[] = publicState.players.map((player) => {
-    const handSeat = publicState.hand?.seats.find((s) => s.player_id === player.player_id);
+    const handSeat = displayHand?.seats.find((s) => s.player_id === player.player_id);
     return {
       playerId: player.player_id,
       name: player.name,
@@ -83,6 +89,7 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
       buyInsUsed: player.buy_ins_used,
       buyInsRemaining: player.buy_ins_remaining,
       lastActionLabel: state.lastActionLabelByPlayer[player.player_id],
+      isWinner: isHandResult && (state.handResultWinners?.includes(player.player_id) ?? false),
     };
   });
 
@@ -104,8 +111,8 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
           seats={seats}
           humanPlayerId={humanPlayerId}
           speechMessages={speechMessages}
-          boardCards={publicState.hand?.board_cards ?? []}
-          potTotal={publicState.hand?.pot_total ?? 0}
+          boardCards={displayHand?.board_cards ?? []}
+          potTotal={displayHand?.pot_total ?? 0}
           bigBlind={publicState.big_blind}
         />
 

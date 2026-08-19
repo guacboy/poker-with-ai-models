@@ -193,6 +193,25 @@
 .seat__cards {
   display: flex;
   gap: 3px;
+  border-radius: 8px;
+}
+
+.seat__cards--winner {
+  border-radius: 8px;
+  animation: winner-glow 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes winner-glow {
+  from {
+    box-shadow:
+      0 0 6px 2px rgba(255, 209, 102, 0.55),
+      0 0 14px 4px rgba(255, 209, 102, 0.3);
+  }
+  to {
+    box-shadow:
+      0 0 14px 5px rgba(255, 209, 102, 0.9),
+      0 0 26px 10px rgba(255, 209, 102, 0.55);
+  }
 }
 
 .seat__info {

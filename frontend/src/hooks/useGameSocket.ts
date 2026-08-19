@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import type { ActionName, ActorView, PublicState, ServerEvent } from "../types/game";
+import type { ActionName, ActorView, PublicHand, PublicState, ServerEvent } from "../types/game";
 import { formatBB } from "../utils/formatChips";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
@@ -24,6 +24,13 @@ interface GameSocketState {
   winnerPlayerId: string | null;
   tournamentOver: boolean;
   error: string | null;
+  // the last in-progress hand's board/seats (including any cards revealed at
+  // showdown) -- kept around so the result screen has something to render,
+  // since the hand itself is gone (publicState.hand is null) once it's over
+  lastHandSnapshot: PublicHand | null;
+  // set for the HAND_RESULT_DISPLAY_SECONDS window after a hand ends; null
+  // once the next hand starts
+  handResultWinners: string[] | null;
 }
 
 type Action =
@@ -40,6 +47,8 @@ const initialState: GameSocketState = {
   winnerPlayerId: null,
   tournamentOver: false,
   error: null,
+  lastHandSnapshot: null,
+  handResultWinners: null,
 };
 
 function formatActionLabel(
@@ -76,7 +85,14 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
         case "snapshot":
           return { ...state, publicState: event.state };
         case "hand_started":
-          return { ...state, publicState: event.state, actorView: null, lastActionLabelByPlayer: {} };
+          return {
+            ...state,
+            publicState: event.state,
+            actorView: null,
+            lastActionLabelByPlayer: {},
+            lastHandSnapshot: event.state.hand,
+            handResultWinners: null,
+          };
         case "awaiting_action":
           return { ...state, actorView: event.view };
         case "player_action": {
@@ -104,6 +120,7 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
             ...state,
             publicState: event.state,
             actorView: null,
+            lastHandSnapshot: event.state.hand,
             lastActionLabelByPlayer: {
               ...labelsBase,
               [event.player_id]: formatActionLabel(
@@ -126,7 +143,10 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
           };
         }
         case "hand_result":
-          return { ...state, publicState: event.state };
+          // event.state.hand is always null here (the hand just finished) --
+          // keep the frozen lastHandSnapshot from the final player_action so
+          // the board/cards stay on screen through the result display window
+          return { ...state, publicState: event.state, handResultWinners: event.winners };
         case "tournament_over":
           return { ...state, tournamentOver: true, winnerPlayerId: event.winner_player_id };
         case "error":

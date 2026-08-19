@@ -42,6 +42,10 @@ AI_THINKING_DELAY_SECONDS = float(os.getenv("AI_THINKING_DELAY_SECONDS", "1.2"))
 # the next player's turn, on top of however long the line itself takes to play.
 AUDIO_TRAILING_DELAY_SECONDS = float(os.getenv("AUDIO_TRAILING_DELAY_SECONDS", "1.0"))
 
+# How long to keep the finished hand (winner glow, board, revealed cards) on
+# screen before dealing the next one.
+HAND_RESULT_DISPLAY_SECONDS = float(os.getenv("HAND_RESULT_DISPLAY_SECONDS", "10.0"))
+
 # Distinct built-in Kokoro voice per seat, for tell-apart-ability only (not
 # personality). See app/tts/kokoro_tts.py.
 VOICE_BY_PLAYER_ID: dict[str, str] = {

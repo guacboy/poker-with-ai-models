@@ -19,6 +19,7 @@ export interface SeatViewModel {
   buyInsUsed: number;
   buyInsRemaining: number;
   lastActionLabel?: string;
+  isWinner?: boolean;
 }
 
 interface SeatProps {
@@ -43,7 +44,7 @@ export function Seat({ seat, isHuman, speechMessage, positionClassName, bigBlind
   return (
     <div className={classes}>
       {speechMessage && <SpeechBubble message={speechMessage} />}
-      <div className="seat__cards">
+      <div className={`seat__cards${seat.isWinner ? " seat__cards--winner" : ""}`}>
         <PlayingCard card={seat.holeCards?.[0]} hidden={!seat.holeCards} />
         <PlayingCard card={seat.holeCards?.[1]} hidden={!seat.holeCards} />
       </div>
