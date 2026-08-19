@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import type {
-  ActionName,
-  ActorView,
-  LogEntry,
-  PublicPlayer,
-  PublicState,
-  ServerEvent,
-} from "../types/game";
+import type { ActionName, ActorView, PublicState, ServerEvent } from "../types/game";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 const WS_BASE = API_BASE.replace(/^http/, "ws");
@@ -25,7 +18,6 @@ interface GameSocketState {
   publicState: PublicState | null;
   actorView: ActorView | null;
   lastPlayerAction: PlayerActionEvent | null;
-  log: LogEntry[];
   winnerPlayerId: string | null;
   tournamentOver: boolean;
   error: string | null;
@@ -41,33 +33,10 @@ const initialState: GameSocketState = {
   publicState: null,
   actorView: null,
   lastPlayerAction: null,
-  log: [],
   winnerPlayerId: null,
   tournamentOver: false,
   error: null,
 };
-
-function playerName(players: PublicPlayer[], id: string): string {
-  return players.find((p) => p.player_id === id)?.name ?? id;
-}
-
-function actionVerb(action: ActionName, amount: number | null): string {
-  switch (action) {
-    case "fold":
-      return "folds";
-    case "check_or_call":
-      return amount ? `calls` : "checks";
-    case "bet_or_raise_to":
-      return `raises to ${amount}`;
-  }
-}
-
-let logCounter = 0;
-function pushLog(log: LogEntry[], text: string): LogEntry[] {
-  logCounter += 1;
-  const entry: LogEntry = { id: `log-${logCounter}`, text };
-  return [...log.slice(-99), entry];
-}
 
 function reducer(state: GameSocketState, action: Action): GameSocketState {
   switch (action.kind) {
@@ -81,20 +50,10 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
         case "snapshot":
           return { ...state, publicState: event.state };
         case "hand_started":
-          return {
-            ...state,
-            publicState: event.state,
-            actorView: null,
-            log: pushLog(
-              state.log,
-              `Hand #${event.state.hand_count + 1} — blinds ${event.state.small_blind}/${event.state.big_blind}`
-            ),
-          };
+          return { ...state, publicState: event.state, actorView: null };
         case "awaiting_action":
           return { ...state, actorView: event.view };
-        case "player_action": {
-          const name = playerName(event.state.players, event.player_id);
-          const text = `${name} ${actionVerb(event.action, event.amount)}`;
+        case "player_action":
           return {
             ...state,
             publicState: event.state,
@@ -107,32 +66,11 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
               message: event.message,
               audioBase64: event.audio_base64,
             },
-            log: pushLog(state.log, text),
           };
-        }
-        case "hand_result": {
-          let log = state.log;
-          for (const bust of event.bust_events) {
-            const name = playerName(event.state.players, bust.player_id);
-            log = pushLog(
-              log,
-              bust.eliminated ? `${name} is eliminated!` : `${name} busts and rebuys.`
-            );
-          }
-          return { ...state, publicState: event.state, log };
-        }
+        case "hand_result":
+          return { ...state, publicState: event.state };
         case "tournament_over":
-          return {
-            ...state,
-            tournamentOver: true,
-            winnerPlayerId: event.winner_player_id,
-            log: pushLog(
-              state.log,
-              event.winner_player_id
-                ? `${playerName(state.publicState?.players ?? [], event.winner_player_id)} wins the tournament!`
-                : "Tournament over."
-            ),
-          };
+          return { ...state, tournamentOver: true, winnerPlayerId: event.winner_player_id };
         case "error":
           return { ...state, error: event.message };
         default:

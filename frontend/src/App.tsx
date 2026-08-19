@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { ActionControls } from "./components/ActionControls";
-import { HandHistoryLog } from "./components/HandHistoryLog";
 import type { SeatViewModel } from "./components/Seat";
 import { Table } from "./components/Table";
 import { TournamentStatus } from "./components/TournamentStatus";
@@ -89,16 +88,16 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
 
   return (
     <div className="game-screen">
-      <div className="game-main">
-        <TournamentStatus
-          handCount={publicState.hand_count}
-          smallBlind={publicState.small_blind}
-          bigBlind={publicState.big_blind}
-          handsUntilNextLevel={publicState.hands_until_next_level}
-          players={publicState.players}
-          humanPlayerId={humanPlayerId}
-        />
+      <TournamentStatus
+        handCount={publicState.hand_count}
+        smallBlind={publicState.small_blind}
+        bigBlind={publicState.big_blind}
+        handsUntilNextLevel={publicState.hands_until_next_level}
+        players={publicState.players}
+        humanPlayerId={humanPlayerId}
+      />
 
+      <div className="game-main">
         <Table
           seats={seats}
           humanPlayerId={humanPlayerId}
@@ -124,8 +123,6 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
 
         {state.error && <div className="error-banner">{state.error}</div>}
       </div>
-
-      <HandHistoryLog entries={state.log} />
     </div>
   );
 }

@@ -20,14 +20,21 @@ export function TournamentStatus({
   const human = players.find((p) => p.player_id === humanPlayerId);
   const activeCount = players.filter((p) => p.status === "active").length;
 
+  const items = [
+    `Hand #${handCount + 1}`,
+    `Blinds ${smallBlind}/${bigBlind}`,
+    `Next level in ${handsUntilNextLevel} hand${handsUntilNextLevel === 1 ? "" : "s"}`,
+    `${activeCount} players remaining`,
+    human ? `Your buy-ins remaining: ${human.buy_ins_remaining}` : null,
+  ].filter((item): item is string => item !== null);
+
   return (
     <div className="tournament-status">
-      <div>
-        Hand #{handCount + 1} · Blinds {smallBlind}/{bigBlind}
-      </div>
-      <div>Next level in {handsUntilNextLevel} hand{handsUntilNextLevel === 1 ? "" : "s"}</div>
-      <div>{activeCount} players remaining</div>
-      {human && <div>Your buy-ins remaining: {human.buy_ins_remaining}</div>}
+      {items.map((item, i) => (
+        <span key={i} className="tournament-status__item">
+          {item}
+        </span>
+      ))}
     </div>
   );
 }

@@ -97,8 +97,3 @@ export type ServerEvent =
     }
   | { type: "tournament_over"; winner_player_id: string | null }
   | { type: "error"; message: string };
-
-export interface LogEntry {
-  id: string;
-  text: string;
-}
