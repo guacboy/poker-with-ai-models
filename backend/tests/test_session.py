@@ -6,7 +6,7 @@ import pytest
 
 from app import config
 from app.ai.base import ActionResult
-from app.api.session import GameSession
+from app.api.session import GameSession, HumanTurnError
 
 
 class StubPlayer:
@@ -84,3 +84,47 @@ async def test_player_action_events_include_call_amount(monkeypatch: pytest.Monk
     next_caller = player_actions[raise_index + 1]
     assert next_caller["action"] == "check_or_call"
     assert next_caller["call_amount"] == raise_events[0]["amount"]
+
+
+@pytest.mark.asyncio
+async def test_submit_human_action_rejects_illegal_action_without_consuming_turn(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Covers the human-facing rejection path after consolidating its
+    validation onto Tournament.validate_action: an illegal submission must
+    raise (not silently fall back, the way a misbehaving AI does), and must
+    leave the pending turn intact so a follow-up legal submission still works."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+
+    session = GameSession.new("Dylan")
+    shared = {"raised": False}
+    session.ai_players = {
+        p.id: StubPlayer(p.id, p.name, shared) for p in session.tournament.players if p.kind == "ai"
+    }
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(200):
+        await asyncio.sleep(0.01)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            break
+
+    assert session.pending_human_action is not None, "expected the human's turn to come up"
+    pending = session.pending_human_action
+    legal = session.tournament.current_hand.legal_actions()
+
+    with pytest.raises(HumanTurnError):
+        session.submit_human_action("bet_or_raise_to", legal.min_bet_to - 1)
+
+    # rejected -- the turn is still open, same future, nothing resolved
+    assert session.pending_human_action is pending
+    assert not pending.done()
+
+    # a legal follow-up still works normally
+    session.submit_human_action("check_or_call", None)
+    assert pending.done()
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task

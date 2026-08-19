@@ -5,7 +5,7 @@ import pytest
 from app import rules
 from app.ai.mock_player import MockPlayer
 from app.engine import state as state_mod
-from app.engine.tournament import PlayerStatus, Tournament
+from app.engine.tournament import ActionError, PlayerStatus, Tournament
 
 
 def make_tournament() -> Tournament:
@@ -64,6 +64,51 @@ def test_rebuy_up_to_max_then_eliminated():
     t._handle_bust(player_id)
     assert t.player(player_id).status is PlayerStatus.ELIMINATED
     assert t.player(player_id).buy_ins_remaining == 0
+
+
+def test_validate_action_rejects_out_of_turn_action():
+    t = make_tournament()
+    hand = t.start_hand()
+    actor_id = hand.current_actor_id
+    other_id = next(p.id for p in t.players if p.id != actor_id)
+
+    with pytest.raises(ActionError):
+        t.validate_action(other_id, "fold")
+
+    # validation alone must not mutate the hand
+    assert hand.current_actor_id == actor_id
+    assert not hand.is_folded(actor_id)
+
+
+def test_validate_action_rejects_out_of_range_raise():
+    t = make_tournament()
+    hand = t.start_hand()
+    actor_id = hand.current_actor_id
+    legal = hand.legal_actions()
+
+    with pytest.raises(ActionError):
+        t.validate_action(actor_id, "bet_or_raise_to", legal.max_bet_to + 1)
+
+    with pytest.raises(ActionError):
+        t.validate_action(actor_id, "bet_or_raise_to", legal.min_bet_to - 1)
+
+    # still their turn, still legal to actually raise within range afterwards
+    assert hand.current_actor_id == actor_id
+    t.apply_action(actor_id, "bet_or_raise_to", legal.min_bet_to)
+    assert hand.current_actor_id != actor_id
+
+
+def test_apply_action_raises_and_does_not_mutate_on_illegal_input():
+    t = make_tournament()
+    hand = t.start_hand()
+    actor_id = hand.current_actor_id
+    stack_before = hand.stack_of(actor_id)
+
+    with pytest.raises(ActionError):
+        t.apply_action(actor_id, "bet_or_raise_to", amount=None)
+
+    assert hand.current_actor_id == actor_id
+    assert hand.stack_of(actor_id) == stack_before
 
 
 def test_is_over_and_winner_when_one_player_remains():

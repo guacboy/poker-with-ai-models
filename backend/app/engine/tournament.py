@@ -124,8 +124,12 @@ class Tournament:
                 return candidate
         raise RuntimeError("no active players left")
 
-    def apply_action(self, player_id: str, action: str, amount: int | None = None) -> None:
-        """Validate and apply one action to the in-progress hand."""
+    def validate_action(self, player_id: str, action: str, amount: int | None = None) -> hand_module.Hand:
+        """Check whether `action` is legal for `player_id` right now, without
+        applying it. Raises ActionError if not; otherwise returns the current
+        hand, so callers who only want to validate (e.g. the API layer, before
+        committing to resolving a pending human turn) can reuse this directly
+        instead of re-deriving the same rules."""
         hand = self.current_hand
         if hand is None or hand.is_over:
             raise ActionError("no hand in progress")
@@ -136,11 +140,9 @@ class Tournament:
         if action == "fold":
             if not legal.can_fold:
                 raise ActionError("fold is not legal here")
-            hand.apply_fold()
         elif action == "check_or_call":
             if not legal.can_check_or_call:
                 raise ActionError("check/call is not legal here")
-            hand.apply_check_or_call()
         elif action == "bet_or_raise_to":
             if not legal.can_bet_or_raise:
                 raise ActionError("bet/raise is not legal here")
@@ -149,9 +151,19 @@ class Tournament:
             lo, hi = legal.min_bet_to, legal.max_bet_to
             if lo is not None and hi is not None and not (lo <= amount <= hi):
                 raise ActionError(f"amount {amount} outside legal range [{lo}, {hi}]")
-            hand.apply_bet_or_raise_to(amount)
         else:
             raise ActionError(f"unknown action {action!r}")
+        return hand
+
+    def apply_action(self, player_id: str, action: str, amount: int | None = None) -> None:
+        """Validate and apply one action to the in-progress hand."""
+        hand = self.validate_action(player_id, action, amount)
+        if action == "fold":
+            hand.apply_fold()
+        elif action == "check_or_call":
+            hand.apply_check_or_call()
+        elif action == "bet_or_raise_to":
+            hand.apply_bet_or_raise_to(amount)
 
     def finish_hand(self) -> dict[str, int]:
         """Apply the completed hand's results, handle busts/rebuys/elimination,

@@ -72,22 +72,15 @@ class GameSession:
             self.websockets.discard(ws)
 
     def submit_human_action(self, action: str, amount: int | None) -> None:
-        hand = self.tournament.current_hand
-        if hand is None or hand.current_actor_id != self.human_player_id:
-            raise HumanTurnError("it is not your turn")
+        # this check is irreducibly session-specific -- Tournament has no notion
+        # of a "pending future" to resolve, only of whose turn it is
         if self.pending_human_action is None or self.pending_human_action.done():
             raise HumanTurnError("not currently awaiting an action")
 
-        legal = hand.legal_actions()
-        if action == "fold" and not legal.can_fold:
-            raise HumanTurnError("fold is not legal here")
-        if action == "check_or_call" and not legal.can_check_or_call:
-            raise HumanTurnError("check/call is not legal here")
-        if action == "bet_or_raise_to":
-            if not legal.can_bet_or_raise:
-                raise HumanTurnError("bet/raise is not legal here")
-            if amount is None or not (legal.min_bet_to <= amount <= legal.max_bet_to):
-                raise HumanTurnError(f"amount must be between {legal.min_bet_to} and {legal.max_bet_to}")
+        try:
+            self.tournament.validate_action(self.human_player_id, action, amount)
+        except ActionError as exc:
+            raise HumanTurnError(str(exc)) from exc
 
         self.pending_human_action.set_result(ActionResult(action=action, amount=amount))
 
