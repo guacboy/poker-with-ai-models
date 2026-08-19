@@ -66,6 +66,44 @@ def test_rebuy_up_to_max_then_eliminated():
     assert t.player(player_id).buy_ins_remaining == 0
 
 
+def test_voluntarily_invested_flag_tracks_real_contributions_beyond_blinds():
+    """Backs the fold-talk-eligibility chore: a seat's `voluntarily_invested`
+    should only flip true once that player has actually put chips in beyond
+    a forced blind post (a real call/raise), not merely for posting or
+    checking their own blind."""
+    t = make_tournament()
+    hand = t.start_hand()
+
+    def seat(pid: str) -> dict:
+        view = state_mod.view_public(t, hand, None)
+        return next(s for s in view["hand"]["seats"] if s["player_id"] == pid)
+
+    sb_id = hand.seat_player_ids[0]
+    bb_id = hand.seat_player_ids[1]
+    utg_id = hand.current_actor_id  # first to act preflop, acts before either blind
+
+    assert seat(sb_id)["voluntarily_invested"] is False
+    assert seat(bb_id)["voluntarily_invested"] is False
+    assert seat(utg_id)["voluntarily_invested"] is False
+
+    # UTG limps in (calls the unraised big blind) -- a real voluntary call
+    t.apply_action(utg_id, "check_or_call")
+    assert seat(utg_id)["voluntarily_invested"] is True
+
+    # fold everyone else around to the blinds
+    while hand.current_actor_id not in (sb_id, bb_id):
+        t.apply_action(hand.current_actor_id, "fold")
+
+    # SB completes to match the big blind -- also a real voluntary call
+    assert seat(sb_id)["voluntarily_invested"] is False
+    t.apply_action(sb_id, "check_or_call")
+    assert seat(sb_id)["voluntarily_invested"] is True
+
+    # BB checks their option for free -- not a voluntary investment
+    t.apply_action(bb_id, "check_or_call")
+    assert seat(bb_id)["voluntarily_invested"] is False
+
+
 def test_validate_action_rejects_out_of_turn_action():
     t = make_tournament()
     hand = t.start_hand()

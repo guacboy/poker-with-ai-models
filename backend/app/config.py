@@ -6,8 +6,6 @@ values to decide which player implementation to instantiate per seat.
 
 # TODO(feat): add profile pictures for the bots in assets/png/
 # TODO(feat): add what type of win it was below the community cards (e.g., Straight flush)
-# TODO(chore): change the color highlight when its the player's turn to white
-# TODO(chore): no dialogue should be played when a player folds during the first round if they have not made any bets or calls prior (if the player also folds without any additional bets from the sm and bb, no dialogue should be played either)
 
 from __future__ import annotations
 

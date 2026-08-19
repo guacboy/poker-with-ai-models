@@ -22,9 +22,12 @@ def _seat_meta(tournament: "Tournament", hand: "Hand") -> list[dict]:
     button_id = hand.seat_player_ids[-1]
     sb_id = hand.seat_player_ids[0]
     bb_id = hand.seat_player_ids[1] if len(hand.seat_player_ids) > 1 else None
+    small_blind, big_blind = tournament.blinds
     seats = []
     for pid in hand.seat_player_ids:
         player = tournament.player(pid)
+        mandatory_blind = big_blind if pid == bb_id else small_blind if pid == sb_id else 0
+        contributed_this_hand = hand.starting_stacks[pid] - hand.stack_of(pid)
         seats.append(
             {
                 "player_id": pid,
@@ -39,6 +42,11 @@ def _seat_meta(tournament: "Tournament", hand: "Hand") -> list[dict]:
                 "is_small_blind": pid == sb_id,
                 "is_big_blind": pid == bb_id,
                 "is_to_act": pid == hand.current_actor_id,
+                # has this player put in anything beyond a forced blind post,
+                # at any point so far this hand -- used to tell a meaningful
+                # fold (giving up on a hand they'd actually entered) apart
+                # from a cheap one (mucking without ever having acted)
+                "voluntarily_invested": contributed_this_hand > mandatory_blind,
             }
         )
     return seats

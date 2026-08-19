@@ -127,12 +127,20 @@ def facing_a_raise(view: dict) -> bool:
 def is_talk_eligible(action: str, view: dict) -> bool:
     """Whether an action is allowed to carry a spoken trash-talk message.
 
-    Talk is limited to meaningful moments: folding, raising/re-raising (which
-    covers shoving all-in -- that's just a bet/raise for the player's whole
-    stack), and calling an actual raise. A free check, or a call that's really
-    just posting/limping for the unraised blind, stays silent.
+    Talk is limited to meaningful moments: raising/re-raising (which covers
+    shoving all-in -- that's just a bet/raise for the player's whole stack),
+    calling an actual raise, and folding -- but only a fold that's actually
+    giving something up. A free check, a call that's really just
+    posting/limping for the unraised blind, and a preflop/flop fold from a
+    player who never put anything beyond a forced blind into this hand all
+    stay silent; there's nothing to react to.
     """
-    if action in ("fold", "bet_or_raise_to"):
+    if action == "fold":
+        if view["street_index"] in (0, 1):  # preflop, flop
+            own_seat = next(s for s in view["seats"] if s["player_id"] == view["your_player_id"])
+            return own_seat["voluntarily_invested"]
+        return True
+    if action == "bet_or_raise_to":
         return True
     if action == "check_or_call":
         return facing_a_raise(view)
