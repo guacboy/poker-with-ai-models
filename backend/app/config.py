@@ -4,11 +4,10 @@ Nothing here talks to a provider SDK directly -- `ai/factory.py` reads these
 values to decide which player implementation to instantiate per seat.
 """
 
-# TODO(feat): png of chips amount next to player
 # TODO(feat): add profile pictures for the bots in assets/png/
 # TODO(feat): add what type of win it was below the community cards (e.g., Straight flush)
-# TODO(chore): add a card.mp3 sound to when new cards are dealt each round
-# TODO(chore): add betting.mp3 sounds to when a player calls an all-in bet
+# TODO(chore): change the color highlight when its the player's turn to white
+# TODO(chore): no dialogue should be played when a player folds during the first round if they have not made any bets or calls prior (if the player also folds without any additional bets from the sm and bb, no dialogue should be played either)
 
 from __future__ import annotations
 

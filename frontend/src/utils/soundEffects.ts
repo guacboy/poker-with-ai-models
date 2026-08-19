@@ -37,7 +37,8 @@ export interface SoundEffectResult {
  * "crowd-gasp.mp3" only plays for the first all-in of a hand, or a later one
  * that shoves for *more* than any all-in seen so far this hand (a bigger
  * stack re-raising over the top) -- a short stack merely calling an existing
- * all-in doesn't re-trigger it. */
+ * all-in doesn't re-trigger it, but still gets a betting sound instead so
+ * the chips going in aren't silent. */
 export function soundEffectForEvent(
   event: ServerEvent,
   prev: SoundEffectTrackingState
@@ -77,6 +78,10 @@ export function soundEffectForEvent(
             if (startingStack > maxAllInStack) {
               sounds.push("crowd-gasp.mp3");
               maxAllInStack = startingStack;
+            } else {
+              // covering/calling an existing bigger all-in still puts chips
+              // in, it just isn't a new biggest shove worth a crowd gasp
+              sounds.push(randomBettingSound());
             }
           } else {
             sounds.push(randomBettingSound());
