@@ -1,0 +1,167 @@
+"""One GameSession per tournament: owns the game loop task, connected
+WebSocket clients, and the human-action handoff between the REST endpoint and
+the loop coroutine waiting on it.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import uuid
+from dataclasses import dataclass, field
+
+from fastapi import WebSocket
+
+from .. import config
+from ..ai.base import ActionResult, clamp_amount
+from ..ai.factory import create_ai_player
+from ..engine import state as state_mod
+from ..engine.tournament import ActionError, Tournament
+from ..tts.kokoro_tts import synthesize
+
+
+class HumanTurnError(Exception):
+    pass
+
+
+@dataclass
+class GameSession:
+    tournament_id: str
+    tournament: Tournament
+    ai_players: dict[str, object]
+    human_player_id: str
+    websockets: set[WebSocket] = field(default_factory=set)
+    pending_human_action: asyncio.Future | None = field(default=None, init=False)
+    task: asyncio.Task | None = field(default=None, init=False)
+
+    @classmethod
+    def new(cls, human_name: str) -> "GameSession":
+        specs = [(config.HUMAN_PLAYER_ID, human_name, "human")] + [
+            (pid, name, "ai") for pid, name in config.AI_SEATS
+        ]
+        tournament = Tournament.new(specs)
+        ai_players = {pid: create_ai_player(pid, name) for pid, name in config.AI_SEATS}
+        return cls(
+            tournament_id=str(uuid.uuid4()),
+            tournament=tournament,
+            ai_players=ai_players,
+            human_player_id=config.HUMAN_PLAYER_ID,
+        )
+
+    def start(self) -> None:
+        if self.task is None:
+            self.task = asyncio.create_task(self._run())
+
+    async def register(self, ws: WebSocket) -> None:
+        await ws.accept()
+        self.websockets.add(ws)
+        await ws.send_json(
+            {"type": "snapshot", "state": state_mod.view_public(self.tournament, self.tournament.current_hand, self.human_player_id)}
+        )
+
+    def unregister(self, ws: WebSocket) -> None:
+        self.websockets.discard(ws)
+
+    async def broadcast(self, event: dict) -> None:
+        dead = []
+        for ws in self.websockets:
+            try:
+                await ws.send_json(event)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.websockets.discard(ws)
+
+    def submit_human_action(self, action: str, amount: int | None) -> None:
+        hand = self.tournament.current_hand
+        if hand is None or hand.current_actor_id != self.human_player_id:
+            raise HumanTurnError("it is not your turn")
+        if self.pending_human_action is None or self.pending_human_action.done():
+            raise HumanTurnError("not currently awaiting an action")
+
+        legal = hand.legal_actions()
+        if action == "fold" and not legal.can_fold:
+            raise HumanTurnError("fold is not legal here")
+        if action == "check_or_call" and not legal.can_check_or_call:
+            raise HumanTurnError("check/call is not legal here")
+        if action == "bet_or_raise_to":
+            if not legal.can_bet_or_raise:
+                raise HumanTurnError("bet/raise is not legal here")
+            if amount is None or not (legal.min_bet_to <= amount <= legal.max_bet_to):
+                raise HumanTurnError(f"amount must be between {legal.min_bet_to} and {legal.max_bet_to}")
+
+        self.pending_human_action.set_result(ActionResult(action=action, amount=amount))
+
+    async def _run(self) -> None:
+        try:
+            while not self.tournament.is_over:
+                hand = self.tournament.start_hand()
+                await self.broadcast(
+                    {"type": "hand_started", "state": state_mod.view_public(self.tournament, hand, self.human_player_id)}
+                )
+
+                while not hand.is_over:
+                    actor_id = hand.current_actor_id
+                    if actor_id == self.human_player_id:
+                        view = state_mod.view_for_actor(self.tournament, hand, actor_id)
+                        await self.broadcast({"type": "awaiting_action", "view": view})
+                        loop = asyncio.get_event_loop()
+                        self.pending_human_action = loop.create_future()
+                        result = await self.pending_human_action
+                        self.pending_human_action = None
+                    else:
+                        view = state_mod.view_for_actor(self.tournament, hand, actor_id)
+                        await asyncio.sleep(config.AI_THINKING_DELAY_SECONDS)
+                        try:
+                            # provider APIs are flaky by nature (timeouts, rate limits,
+                            # occasional malformed JSON) -- never let one bad call kill
+                            # the whole tournament loop.
+                            result = await self.ai_players[actor_id].decide(view)
+                            result.amount = clamp_amount(view, result.amount)
+                        except Exception:
+                            result = ActionResult(action="fold", amount=None, message=None)
+
+                    try:
+                        self.tournament.apply_action(actor_id, result.action, result.amount)
+                    except ActionError:
+                        # a misbehaving AI response falls back to the safest legal action
+                        legal = hand.legal_actions()
+                        fallback = "check_or_call" if legal.can_check_or_call else "fold"
+                        self.tournament.apply_action(actor_id, fallback, None)
+                        result = ActionResult(action=fallback, amount=None, message=None)
+
+                    audio_base64 = await synthesize(result.message, config.VOICE_BY_PLAYER_ID.get(actor_id, "")) if result.message else None
+
+                    await self.broadcast(
+                        {
+                            "type": "player_action",
+                            "player_id": actor_id,
+                            "action": result.action,
+                            "amount": result.amount,
+                            "message": result.message,
+                            "audio_base64": audio_base64,
+                            "state": state_mod.view_public(self.tournament, hand, self.human_player_id),
+                        }
+                    )
+
+                net_results = self.tournament.finish_hand()
+                await self.broadcast(
+                    {
+                        "type": "hand_result",
+                        "net_results": net_results,
+                        "bust_events": self.tournament.last_bust_events,
+                        "state": state_mod.view_public(self.tournament, None, self.human_player_id),
+                    }
+                )
+
+            await self.broadcast(
+                {
+                    "type": "tournament_over",
+                    "winner_player_id": self.tournament.winner.id if self.tournament.winner else None,
+                }
+            )
+        except Exception as exc:  # surfaces loop crashes to connected clients instead of failing silently
+            await self.broadcast({"type": "error", "message": str(exc)})
+            raise
+
+
+SESSIONS: dict[str, GameSession] = {}
