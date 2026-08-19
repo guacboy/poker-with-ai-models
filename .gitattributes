@@ -1,0 +1,5 @@
+# Shell scripts must keep LF line endings on every platform -- CRLF breaks the
+# shebang line (e.g. Windows' core.autocrlf=true would otherwise silently
+# corrupt .githooks/pre-push on checkout).
+*.sh text eol=lf
+.githooks/* text eol=lf

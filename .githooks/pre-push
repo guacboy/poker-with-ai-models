@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Runs the same checks as CI before allowing a push. Enable with:
+#   git config core.hooksPath .githooks
+set -e
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+echo "pre-push: backend tests"
+(
+  cd "$repo_root/backend"
+  if [ -f .venv/Scripts/activate ]; then
+    source .venv/Scripts/activate
+  elif [ -f .venv/bin/activate ]; then
+    source .venv/bin/activate
+  else
+    echo "pre-push: backend/.venv not found -- create it first (see README)" >&2
+    exit 1
+  fi
+  pytest -q
+)
+
+echo "pre-push: frontend build"
+(
+  cd "$repo_root/frontend"
+  bun run build
+)
+
+echo "pre-push: all checks passed"
