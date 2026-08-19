@@ -50,3 +50,42 @@ def test_fold_out_win_reveals_no_hole_cards():
     winners = {pid for pid, net in hand.net_results().items() if net > 0}
     assert len(winners) == 1, "a fold-out always has exactly one winner"
     assert hand.revealed_hole_cards() == {}
+
+
+def test_dealt_hole_cards_of_survives_folding():
+    """pokerkit clears a player's hole_cards from its own state the instant
+    they fold (mucking) -- hole_cards_of documents that, but a viewer should
+    still be able to see their OWN folded hand, which is what
+    dealt_hole_cards_of is for."""
+    t = make_tournament()
+    hand = t.start_hand()
+    folded_pid = hand.current_actor_id
+
+    original = hand.dealt_hole_cards_of(folded_pid)
+    assert len(original) == 2
+
+    t.apply_action(folded_pid, "fold")
+
+    assert hand.hole_cards_of(folded_pid) == [], "pokerkit mucks a folded player's cards"
+    assert hand.dealt_hole_cards_of(folded_pid) == original, "but the dealt snapshot must be unaffected"
+
+
+def test_dealt_hole_cards_of_survives_hand_completion():
+    """At the end of a hand, pokerkit also mucks (clears) the hole cards of
+    anyone left unshown -- e.g. a player who reached showdown but couldn't
+    beat what was already shown. dealt_hole_cards_of must still return their
+    real hand after the fact, for every seat, not just the winner."""
+    t = make_tournament()
+    hand = t.start_hand()
+    all_seats = list(hand.seat_player_ids)
+    dealt_before = {pid: hand.dealt_hole_cards_of(pid) for pid in all_seats}
+
+    while not hand.is_over:
+        actor_id = hand.current_actor_id
+        legal = hand.legal_actions()
+        action = "check_or_call" if legal.can_check_or_call else "fold"
+        t.apply_action(actor_id, action)
+
+    for pid in all_seats:
+        assert hand.dealt_hole_cards_of(pid) == dealt_before[pid]
+        assert len(hand.dealt_hole_cards_of(pid)) == 2

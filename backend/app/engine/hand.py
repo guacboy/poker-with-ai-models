@@ -54,6 +54,14 @@ class Hand:
         self.state = state
         self.seat_player_ids = seat_player_ids
         self.starting_stacks = starting_stacks
+        # pokerkit clears a player's hole cards from state the moment they're
+        # mucked -- on folding, and again for anyone left unshown once the hand
+        # ends -- so `hole_cards_of` goes empty for them from that point on.
+        # A viewer should still see their OWN hand after folding or losing an
+        # unshown showdown, so snapshot what was actually dealt up front.
+        self._dealt_hole_cards = {
+            pid: [_card_str(c) for c in state.hole_cards[i]] for i, pid in enumerate(seat_player_ids)
+        }
 
     @classmethod
     def start(
@@ -100,6 +108,14 @@ class Hand:
     def hole_cards_of(self, player_id: str) -> list[str]:
         idx = self.seat_player_ids.index(player_id)
         return [_card_str(card) for card in self.state.hole_cards[idx]]
+
+    def dealt_hole_cards_of(self, player_id: str) -> list[str]:
+        """The two cards originally dealt to `player_id` this hand, unaffected
+        by folding or end-of-hand mucking (unlike `hole_cards_of`, which goes
+        empty for a player the moment their cards are mucked). Use this for
+        showing a viewer their own hand -- they should still see it even after
+        folding or losing an unshown hand at showdown."""
+        return self._dealt_hole_cards[player_id]
 
     def stack_of(self, player_id: str) -> int:
         idx = self.seat_player_ids.index(player_id)

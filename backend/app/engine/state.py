@@ -103,7 +103,11 @@ def view_public(
     for seat in _seat_meta(tournament, hand):
         pid = seat["player_id"]
         if pid == viewer_id:
-            hole_cards = hand.hole_cards_of(pid)
+            # not hand.hole_cards_of(pid) -- pokerkit clears a player's hole
+            # cards from its own state once they're mucked (on folding, or at
+            # the end of the hand for anyone left unshown), but the viewer
+            # should still see their own cards regardless
+            hole_cards = hand.dealt_hole_cards_of(pid)
         elif pid in revealed:
             hole_cards = revealed[pid]
         else:

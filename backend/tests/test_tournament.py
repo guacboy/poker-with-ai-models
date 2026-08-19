@@ -111,6 +111,23 @@ def test_apply_action_raises_and_does_not_mutate_on_illegal_input():
     assert hand.stack_of(actor_id) == stack_before
 
 
+def test_view_public_shows_viewers_own_cards_even_after_they_fold():
+    """A broadcast is always built with viewer_id set to the human -- they
+    should keep seeing their own hole cards for the rest of the hand (and
+    into the post-hand freeze-frame) even after folding, not just up until
+    the moment they mucked."""
+    t = make_tournament()
+    hand = t.start_hand()
+    viewer_id = hand.current_actor_id
+
+    dealt = hand.dealt_hole_cards_of(viewer_id)
+    t.apply_action(viewer_id, "fold")
+
+    view = state_mod.view_public(t, hand, viewer_id)
+    viewer_seat = next(s for s in view["hand"]["seats"] if s["player_id"] == viewer_id)
+    assert viewer_seat["hole_cards"] == dealt
+
+
 def test_is_over_and_winner_when_one_player_remains():
     t = make_tournament()
     for p in t.players[1:]:

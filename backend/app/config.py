@@ -4,6 +4,11 @@ Nothing here talks to a provider SDK directly -- `ai/factory.py` reads these
 values to decide which player implementation to instantiate per seat.
 """
 
+# TODO(feat): add sounds in assets/sounds/
+# TODO(feat): add profile pictures for the bots in assets/png/
+# TODO(feat): add what type of win it was below the community cards (e.g., Straight flush)
+# TODO(chore): always show the human's options but grey and disable it when it is not their turn. move the "waiting for players" to appear under the human's options
+
 from __future__ import annotations
 
 import os
