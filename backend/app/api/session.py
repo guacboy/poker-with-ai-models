@@ -140,6 +140,10 @@ class GameSession:
                             "player_id": actor_id,
                             "action": result.action,
                             "amount": result.amount,
+                            # call_amount as of the decision (before this action was applied)
+                            # -- lets the frontend tell a check apart from a call, and an
+                            # opening bet apart from a raise, since `amount` alone can't.
+                            "call_amount": view["legal_actions"]["call_amount"],
                             "message": result.message,
                             "audio_base64": audio_base64,
                             "state": state_mod.view_public(self.tournament, hand, self.human_player_id),

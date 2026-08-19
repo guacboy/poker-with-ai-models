@@ -85,6 +85,7 @@ export type ServerEvent =
       player_id: string;
       action: ActionName;
       amount: number | null;
+      call_amount: number;
       message: string | null;
       audio_base64: string | null;
       state: PublicState;

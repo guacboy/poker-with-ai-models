@@ -17,6 +17,7 @@ export interface SeatViewModel {
   holeCards: string[] | null;
   buyInsUsed: number;
   buyInsRemaining: number;
+  lastActionLabel?: string;
 }
 
 interface SeatProps {
@@ -49,6 +50,7 @@ export function Seat({ seat, isHuman, speechMessage, positionClassName }: SeatPr
           {seat.name}
           {isHuman && <span className="seat__you-tag">you</span>}
         </div>
+        {seat.lastActionLabel && <div className="seat__last-action">{seat.lastActionLabel}</div>}
         <div className="seat__stack">{seat.stack.toLocaleString()}</div>
         <div className="seat__badges">
           {seat.isButton && <span className="badge badge--button">D</span>}

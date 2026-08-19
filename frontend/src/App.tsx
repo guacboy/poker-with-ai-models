@@ -62,7 +62,9 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
       name: player.name,
       kind: player.kind,
       status: player.status,
-      stack: player.stack,
+      // handSeat.stack is live and updates as bets go in; player.stack only
+      // reflects stack-at-start-of-hand until the hand finishes
+      stack: handSeat?.stack ?? player.stack,
       bet: handSeat?.bet ?? 0,
       folded: handSeat?.folded ?? false,
       isButton: handSeat?.is_button ?? false,
@@ -72,6 +74,7 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
       holeCards: handSeat?.hole_cards ?? null,
       buyInsUsed: player.buy_ins_used,
       buyInsRemaining: player.buy_ins_remaining,
+      lastActionLabel: state.lastActionLabelByPlayer[player.player_id],
     };
   });
 
@@ -99,6 +102,7 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
 
         <ActionControls
           legalActions={isMyTurn ? state.actorView!.legal_actions : null}
+          bigBlind={publicState.big_blind}
           onAction={(action, amount) => {
             submitAction(action, amount).catch((err) => console.error(err));
           }}

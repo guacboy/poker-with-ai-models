@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import type { ActionName, ActorView, PublicState, ServerEvent } from "../types/game";
+import { formatBB } from "../utils/formatChips";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 const WS_BASE = API_BASE.replace(/^http/, "ws");
@@ -18,6 +19,7 @@ interface GameSocketState {
   publicState: PublicState | null;
   actorView: ActorView | null;
   lastPlayerAction: PlayerActionEvent | null;
+  lastActionLabelByPlayer: Record<string, string>;
   winnerPlayerId: string | null;
   tournamentOver: boolean;
   error: string | null;
@@ -33,10 +35,33 @@ const initialState: GameSocketState = {
   publicState: null,
   actorView: null,
   lastPlayerAction: null,
+  lastActionLabelByPlayer: {},
   winnerPlayerId: null,
   tournamentOver: false,
   error: null,
 };
+
+function formatActionLabel(
+  action: ActionName,
+  amount: number | null,
+  callAmount: number,
+  resultingStack: number,
+  bigBlind: number
+): string {
+  const isAllIn = resultingStack === 0;
+  switch (action) {
+    case "fold":
+      return "Folded";
+    case "check_or_call":
+      if (callAmount === 0) return "Checked";
+      return isAllIn ? "All In" : `Called ${formatBB(callAmount, bigBlind)}`;
+    case "bet_or_raise_to":
+      if (isAllIn) return "All In";
+      return callAmount > 0
+        ? `Raised to ${formatBB(amount ?? 0, bigBlind)}`
+        : `Bet ${formatBB(amount ?? 0, bigBlind)}`;
+  }
+}
 
 function reducer(state: GameSocketState, action: Action): GameSocketState {
   switch (action.kind) {
@@ -50,14 +75,44 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
         case "snapshot":
           return { ...state, publicState: event.state };
         case "hand_started":
-          return { ...state, publicState: event.state, actorView: null };
+          return { ...state, publicState: event.state, actorView: null, lastActionLabelByPlayer: {} };
         case "awaiting_action":
           return { ...state, actorView: event.view };
-        case "player_action":
+        case "player_action": {
+          const priorStreet = state.publicState?.hand?.street_index ?? null;
+          const newStreet = event.state.hand?.street_index ?? null;
+          // a street change (community cards just dealt) makes every other
+          // seat's leftover check/call/raise label from the previous betting
+          // round stale -- but a "Folded" label should stick around for the
+          // rest of the hand, same as the seat's dimmed styling does.
+          const labelsBase =
+            newStreet !== priorStreet
+              ? Object.fromEntries(
+                  Object.entries(state.lastActionLabelByPlayer).filter(([playerId]) => {
+                    const seat = event.state.hand?.seats.find((s) => s.player_id === playerId);
+                    return seat?.folded === true;
+                  })
+                )
+              : state.lastActionLabelByPlayer;
+          // the live, in-hand stack (not PublicState.players[].stack, which only
+          // reflects stack-at-start-of-hand until finish_hand() runs) is what
+          // actually tells us whether this action put them all in
+          const resultingStack =
+            event.state.hand?.seats.find((s) => s.player_id === event.player_id)?.stack ?? -1;
           return {
             ...state,
             publicState: event.state,
             actorView: null,
+            lastActionLabelByPlayer: {
+              ...labelsBase,
+              [event.player_id]: formatActionLabel(
+                event.action,
+                event.amount,
+                event.call_amount,
+                resultingStack,
+                event.state.big_blind
+              ),
+            },
             lastPlayerAction: {
               id: `${event.player_id}-${Date.now()}-${Math.random()}`,
               playerId: event.player_id,
@@ -67,6 +122,7 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
               audioBase64: event.audio_base64,
             },
           };
+        }
         case "hand_result":
           return { ...state, publicState: event.state };
         case "tournament_over":
