@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .. import config
 from .schemas import ActionRequest, NewTournamentRequest, NewTournamentResponse
@@ -15,6 +18,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# static sound effects (betting, all-in, cards, folding) -- lives at the repo
+# root as assets/sounds/, served here so the frontend can just <audio src>
+# them by URL instead of duplicating the files into the frontend build
+SOUNDS_DIR = Path(__file__).resolve().parents[3] / "assets" / "sounds"
+if SOUNDS_DIR.is_dir():
+    app.mount("/sounds", StaticFiles(directory=SOUNDS_DIR), name="sounds")
 
 
 def get_session(tournament_id: str) -> GameSession:

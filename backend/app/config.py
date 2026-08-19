@@ -4,10 +4,12 @@ Nothing here talks to a provider SDK directly -- `ai/factory.py` reads these
 values to decide which player implementation to instantiate per seat.
 """
 
-# TODO(feat): add sounds in assets/sounds/
+# TODO(feat): png of chips amount next to player
 # TODO(feat): add profile pictures for the bots in assets/png/
 # TODO(feat): add what type of win it was below the community cards (e.g., Straight flush)
 # TODO(chore): always show the human's options but grey and disable it when it is not their turn. move the "waiting for players" to appear under the human's options
+# TODO(bug): cards are dimmed when no more actions are present except for the winning hand too early, this spoils who wins the hand in advanced (e.g., going all in at the pre-flop). can you make all the players card currently in play continue to be visible until the river is shown, showcasing which hand won by highlighting the glow and dimming the other's cards)
+# TODO(bug): double check the rebuy logic, i think the players are able to rebuy 4 times instead of 3. also, the rebuy number doesn't update after 2.
 
 from __future__ import annotations
 
@@ -45,11 +47,11 @@ AI_THINKING_DELAY_SECONDS = float(os.getenv("AI_THINKING_DELAY_SECONDS", "1.2"))
 
 # After a spoken trash-talk line, how much longer to hold before moving on to
 # the next player's turn, on top of however long the line itself takes to play.
-AUDIO_TRAILING_DELAY_SECONDS = float(os.getenv("AUDIO_TRAILING_DELAY_SECONDS", "1.0"))
+AUDIO_TRAILING_DELAY_SECONDS = float(os.getenv("AUDIO_TRAILING_DELAY_SECONDS", "0.5"))
 
 # How long to keep the finished hand (winner glow, board, revealed cards) on
 # screen before dealing the next one.
-HAND_RESULT_DISPLAY_SECONDS = float(os.getenv("HAND_RESULT_DISPLAY_SECONDS", "10.0"))
+HAND_RESULT_DISPLAY_SECONDS = float(os.getenv("HAND_RESULT_DISPLAY_SECONDS", "5.0"))
 
 # When a single action leaves no more decisions to make (e.g. everyone left is
 # all-in) and pokerkit deals out multiple remaining streets at once, how long

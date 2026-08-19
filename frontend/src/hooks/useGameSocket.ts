@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import type { ActionName, ActorView, PublicHand, PublicState, ServerEvent } from "../types/game";
 import { formatBB } from "../utils/formatChips";
+import { INITIAL_SOUND_EFFECT_TRACKING_STATE, soundEffectForEvent } from "../utils/soundEffects";
+import { useSoundEffects } from "./useSoundEffects";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 const WS_BASE = API_BASE.replace(/^http/, "ws");
@@ -165,6 +167,8 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
 export function useGameSocket(tournamentId: string | null) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const wsRef = useRef<WebSocket | null>(null);
+  const { play: playSoundEffect } = useSoundEffects();
+  const soundTrackingRef = useRef(INITIAL_SOUND_EFFECT_TRACKING_STATE);
 
   useEffect(() => {
     if (!tournamentId) return;
@@ -176,6 +180,11 @@ export function useGameSocket(tournamentId: string | null) {
     ws.onclose = () => dispatch({ kind: "disconnected" });
     ws.onmessage = (event) => {
       const parsed = JSON.parse(event.data) as ServerEvent;
+
+      const { sounds, next } = soundEffectForEvent(parsed, soundTrackingRef.current);
+      soundTrackingRef.current = next;
+      sounds.forEach(playSoundEffect);
+
       dispatch({ kind: "server_event", event: parsed });
     };
 
@@ -183,7 +192,7 @@ export function useGameSocket(tournamentId: string | null) {
       ws.close();
       wsRef.current = null;
     };
-  }, [tournamentId]);
+  }, [tournamentId, playSoundEffect]);
 
   const submitAction = useCallback(
     async (action: ActionName, amount: number | null) => {
