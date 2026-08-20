@@ -24,6 +24,13 @@
   background: rgba(0, 0, 0, 0.25);
 }
 
+.start-overlay__buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
 .start-overlay__button {
   background: var(--accent);
   color: white;
@@ -33,6 +40,65 @@
   font-weight: 700;
   font-size: 16px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.start-overlay__debug-button {
+  background: #3a3f4a;
+  color: var(--text-dim);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* ---------- Debug widget ---------- */
+
+.debug-widget {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 150px;
+  z-index: 20;
+}
+
+.debug-widget__title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--warn);
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+.debug-widget__btn {
+  background: #2a2f3a;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.debug-widget__btn--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.debug-widget__btn--danger {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .loading-screen {

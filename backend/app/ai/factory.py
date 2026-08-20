@@ -1,7 +1,11 @@
 """Picks the real provider for a seat when its API key is configured, falling
 back to the randomized mock player otherwise. This is the one place that
 needs to change as keys get added -- nothing else in the app cares which
-implementation a seat is actually running."""
+implementation a seat is actually running.
+
+Debug-mode sessions (see api/session.py) never call this at all -- they build
+every seat's MockPlayer directly, so a debug game can never trigger a real
+provider call regardless of what's configured here."""
 
 from __future__ import annotations
 

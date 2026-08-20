@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { ActionControls } from "./components/ActionControls";
+import { DebugWidget } from "./components/DebugWidget";
 import type { SeatViewModel } from "./components/Seat";
 import { Table } from "./components/Table";
 import { TournamentStatus } from "./components/TournamentStatus";
@@ -20,10 +21,22 @@ const FALLBACK_SPEECH_BUBBLE_DURATION_MS = 4500;
 const AUDIO_TRAILING_DELAY_MS = 1000;
 
 // Shows the real table layout (dimmed, inert) as a backdrop instead of a
-// blank splash screen -- `starting` lifts the dim and hides the button the
-// instant it's clicked, so the table visibly brightens while the tournament
+// blank splash screen -- `starting` lifts the dim and hides the buttons the
+// instant one is clicked, so the table visibly brightens while the tournament
 // is created underneath, rather than cutting straight to a loading screen.
-function StartOverlay({ onStart, starting }: { onStart: () => void; starting: boolean }) {
+//
+// Debug Mode never calls a real AI provider: it's a completely separate
+// codepath (GameSession.new(debug=True) on the backend builds every seat as a
+// MockPlayer directly, without ever importing/constructing a real provider
+// client), so no API usage happens just from clicking it -- only "Start
+// Tournament" can ever trigger a real API call, and only once it's clicked.
+function StartOverlay({
+  onStart,
+  starting,
+}: {
+  onStart: (debug: boolean) => void;
+  starting: boolean;
+}) {
   return (
     <div className="start-overlay">
       <div
@@ -53,16 +66,29 @@ function StartOverlay({ onStart, starting }: { onStart: () => void; starting: bo
       </div>
       {!starting && (
         <div className="start-overlay__scrim">
-          <button className="start-overlay__button" onClick={onStart}>
-            Start Tournament
-          </button>
+          <div className="start-overlay__buttons">
+            <button className="start-overlay__button" onClick={() => onStart(false)}>
+              Start Tournament
+            </button>
+            <button className="start-overlay__debug-button" onClick={() => onStart(true)}>
+              Debug Mode
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; humanPlayerId: string }) {
+function GameScreen({
+  tournamentId,
+  humanPlayerId,
+  isDebug,
+}: {
+  tournamentId: string;
+  humanPlayerId: string;
+  isDebug: boolean;
+}) {
   const { state, submitAction } = useGameSocket(tournamentId);
   const { enqueue } = useAudioQueue();
 
@@ -145,6 +171,7 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
 
   return (
     <div className="game-screen">
+      {isDebug && <DebugWidget tournamentId={tournamentId} />}
       <TournamentStatus
         handCount={publicState.hand_count}
         smallBlind={publicState.small_blind}
@@ -188,19 +215,21 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
 }
 
 export default function App() {
-  const [session, setSession] = useState<{ tournamentId: string; humanPlayerId: string } | null>(
-    null
-  );
+  const [session, setSession] = useState<{
+    tournamentId: string;
+    humanPlayerId: string;
+    isDebug: boolean;
+  } | null>(null);
   const [starting, setStarting] = useState(false);
 
   if (!session) {
     return (
       <StartOverlay
         starting={starting}
-        onStart={async () => {
+        onStart={async (debug) => {
           setStarting(true);
           try {
-            const result = await createTournament();
+            const result = await createTournament({ debug });
             setSession(result);
           } catch (err) {
             console.error(err);
@@ -211,5 +240,11 @@ export default function App() {
     );
   }
 
-  return <GameScreen tournamentId={session.tournamentId} humanPlayerId={session.humanPlayerId} />;
+  return (
+    <GameScreen
+      tournamentId={session.tournamentId}
+      humanPlayerId={session.humanPlayerId}
+      isDebug={session.isDebug}
+    />
+  );
 }

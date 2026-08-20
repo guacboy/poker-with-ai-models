@@ -66,6 +66,70 @@ def test_rebuy_up_to_max_then_eliminated():
     assert t.player(player_id).buy_ins_remaining == 0
 
 
+def test_forfeit_current_hand_is_a_noop_with_no_hand_in_progress():
+    t = make_tournament()
+    assert t.forfeit_current_hand() == {}
+
+
+def test_forfeit_current_hand_ends_the_hand_and_keeps_committed_chips_forfeited():
+    t = make_tournament()
+    hand = t.start_hand()
+    actor_id = hand.current_actor_id
+    stack_before_hand = t.player(actor_id).stack
+
+    # the actor calls, putting chips in the pot -- those chips must NOT come
+    # back to them once the hand is forfeited, unlike a normal fold
+    t.apply_action(actor_id, "check_or_call")
+    live_stack_after_call = hand.stack_of(actor_id)
+    assert live_stack_after_call < stack_before_hand
+
+    net_results = t.forfeit_current_hand()
+
+    assert t.current_hand is None
+    assert t.player(actor_id).stack == live_stack_after_call
+    assert net_results[actor_id] == live_stack_after_call - stack_before_hand
+    # bookkeeping still ran, same as a normal finish_hand
+    assert t.hand_count == 1
+
+
+def test_forfeit_current_hand_can_trigger_a_bust():
+    t = make_tournament()
+    hand = t.start_hand()
+    actor_id = hand.current_actor_id
+
+    # first-to-act preflop always has the option to shove their entire stack
+    legal = hand.legal_actions()
+    assert legal.can_bet_or_raise
+    t.apply_action(actor_id, "bet_or_raise_to", legal.max_bet_to)
+    assert hand.stack_of(actor_id) == 0
+
+    t.forfeit_current_hand()
+
+    assert t.player(actor_id).buy_ins_used == 2  # rebought
+    assert t.player(actor_id).stack == rules.STARTING_STACK
+
+
+def test_view_public_reveal_all_shows_every_hole_card_regardless_of_status():
+    """Backs the debug "always show hands" control: with reveal_all=True,
+    even a folded/un-shown seat's dealt hole cards should be visible to a
+    viewer who normally wouldn't see them at all."""
+    t = make_tournament()
+    hand = t.start_hand()
+    folded_id = hand.current_actor_id
+    other_id = next(pid for pid in hand.seat_player_ids if pid != folded_id)
+    dealt = hand.dealt_hole_cards_of(folded_id)
+
+    t.apply_action(folded_id, "fold")
+
+    normal_view = state_mod.view_public(t, hand, other_id)
+    normal_seat = next(s for s in normal_view["hand"]["seats"] if s["player_id"] == folded_id)
+    assert normal_seat["hole_cards"] is None  # hidden, as usual
+
+    debug_view = state_mod.view_public(t, hand, other_id, reveal_all=True)
+    debug_seat = next(s for s in debug_view["hand"]["seats"] if s["player_id"] == folded_id)
+    assert debug_seat["hole_cards"] == dealt
+
+
 def test_voluntarily_invested_flag_tracks_real_contributions_beyond_blinds():
     """Backs the fold-talk-eligibility chore: a seat's `voluntarily_invested`
     should only flip true once that player has actually put chips in beyond

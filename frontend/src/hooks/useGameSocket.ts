@@ -230,16 +230,46 @@ export function useGameSocket(tournamentId: string | null) {
   return { state, submitAction };
 }
 
-export async function createTournament(): Promise<{
+export async function createTournament(options?: { debug?: boolean }): Promise<{
   tournamentId: string;
   humanPlayerId: string;
+  isDebug: boolean;
 }> {
   const resp = await fetch(`${API_BASE}/tournament/new`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ human_name: "You" }),
+    body: JSON.stringify({ human_name: "You", debug: options?.debug ?? false }),
   });
   if (!resp.ok) throw new Error(`failed to start tournament (${resp.status})`);
   const body = await resp.json();
-  return { tournamentId: body.tournament_id, humanPlayerId: body.human_player_id };
+  return { tournamentId: body.tournament_id, humanPlayerId: body.human_player_id, isDebug: body.is_debug };
+}
+
+export type ForcedActionMode = "all_in" | "call" | "check" | "fold";
+
+// Debug-only controls -- the backend rejects all of these with a 403 on a
+// non-debug tournament, so there's no risk of accidentally affecting a real
+// (API-key-driven) game.
+async function debugPost(tournamentId: string, path: string, body: unknown): Promise<void> {
+  const resp = await fetch(`${API_BASE}/tournament/${tournamentId}/debug/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const detail = await resp.json().catch(() => ({}));
+    throw new Error(detail.detail ?? `debug request failed (${resp.status})`);
+  }
+}
+
+export function setForcedAiAction(tournamentId: string, mode: ForcedActionMode | null): Promise<void> {
+  return debugPost(tournamentId, "forced_action", { mode });
+}
+
+export function setAlwaysShowHands(tournamentId: string, enabled: boolean): Promise<void> {
+  return debugPost(tournamentId, "always_show_hands", { enabled });
+}
+
+export function endRound(tournamentId: string): Promise<void> {
+  return debugPost(tournamentId, "end_round", {});
 }

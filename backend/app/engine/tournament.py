@@ -176,8 +176,38 @@ class Tournament:
         for pid, stack in finals.items():
             self.player(pid).stack = stack
 
-        for pid, stack in finals.items():
-            if stack == 0:
+        self._end_of_hand_bookkeeping(hand)
+        net_results = hand.net_results()
+        self.current_hand = None
+        return net_results
+
+    def forfeit_current_hand(self) -> dict[str, int]:
+        """Debug-only escape hatch: immediately end the in-progress hand
+        regardless of its state (mid betting round, mid all-in runout,
+        whatever), instead of letting it play out through pokerkit. Whatever
+        chips are already committed this hand stay committed -- forfeited,
+        not returned to their owner or awarded to anyone -- only each
+        player's live remaining stack survives. No-op if no hand is in
+        progress. Returns net chip change per player id, same shape as
+        `finish_hand`."""
+        hand = self.current_hand
+        if hand is None:
+            return {}
+
+        for pid in hand.seat_player_ids:
+            self.player(pid).stack = hand.stack_of(pid)
+
+        self._end_of_hand_bookkeeping(hand)
+        net_results = hand.net_results()
+        self.current_hand = None
+        return net_results
+
+    def _end_of_hand_bookkeeping(self, hand: hand_module.Hand) -> None:
+        """Shared by a normal `finish_hand` and a debug `forfeit_current_hand`:
+        bust/rebuy/elimination checks against whatever each player's stack
+        ended up at, plus advancing the button and blind level."""
+        for pid in hand.seat_player_ids:
+            if self.player(pid).stack == 0:
                 self._handle_bust(pid)
 
         self.button_index = (self.button_index + 1) % len(self.players)
@@ -185,10 +215,6 @@ class Tournament:
         self.hand_count += 1
         if self.hand_count % rules.HANDS_PER_BLIND_LEVEL == 0:
             self.blind_level += 1
-
-        net_results = hand.net_results()
-        self.current_hand = None
-        return net_results
 
     def _handle_bust(self, player_id: str) -> None:
         player = self.player(player_id)

@@ -80,6 +80,7 @@ def view_public(
     viewer_id: str | None = None,
     *,
     board_cards_override: list[str] | None = None,
+    reveal_all: bool = False,
 ) -> dict:
     base = {
         "hand_count": tournament.hand_count,
@@ -110,7 +111,12 @@ def view_public(
     seats = []
     for seat in _seat_meta(tournament, hand):
         pid = seat["player_id"]
-        if pid == viewer_id:
+        if reveal_all:
+            # debug-only "always show hands" -- dealt_hole_cards_of (not
+            # hole_cards_of) survives folding/mucking, same reasoning as the
+            # viewer's-own-cards case below
+            hole_cards = hand.dealt_hole_cards_of(pid)
+        elif pid == viewer_id:
             # not hand.hole_cards_of(pid) -- pokerkit clears a player's hole
             # cards from its own state once they're mucked (on folding, or at
             # the end of the hand for anyone left unshown), but the viewer

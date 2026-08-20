@@ -6,8 +6,10 @@ import pytest
 
 from app import config
 from app.ai.base import ActionResult
+from app.ai.mock_player import MockPlayer
+from app.ai.providers.anthropic_player import AnthropicPlayer
 from app.api import session as session_module
-from app.api.session import GameSession, HumanTurnError
+from app.api.session import DebugOnlyError, GameSession, HumanTurnError
 
 
 class AlwaysRaiseWithMessagePlayer:
@@ -448,3 +450,192 @@ async def test_all_in_runout_reveals_streets_one_at_a_time(monkeypatch: pytest.M
                 f"board jumped from {before} to {after} cards in one broadcast -- "
                 f"full sequence was {seen_sizes}"
             )
+
+
+def test_debug_session_uses_mock_players_regardless_of_configured_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(config, "ANTHROPIC_API_KEY", "sk-fake")
+    monkeypatch.setattr(config, "OPENAI_API_KEY", "sk-fake")
+    monkeypatch.setattr(config, "DEEPSEEK_API_KEY", "sk-fake")
+    monkeypatch.setattr(config, "GEMINI_API_KEY", "sk-fake")
+    monkeypatch.setattr(config, "XAI_API_KEY", "sk-fake")
+
+    debug_session = GameSession.new("Dylan", debug=True)
+    assert debug_session.is_debug is True
+    for pid, _name in config.AI_SEATS:
+        assert isinstance(debug_session.ai_players[pid], MockPlayer)
+
+    # sanity check: the same keys DO produce a real provider on a normal
+    # session, proving debug mode is what's actually forcing the mock here
+    real_session = GameSession.new("Dylan", debug=False)
+    assert isinstance(real_session.ai_players["claude"], AnthropicPlayer)
+
+
+@pytest.mark.asyncio
+async def test_debug_only_controls_reject_a_non_debug_session() -> None:
+    session = GameSession.new("Dylan", debug=False)
+
+    with pytest.raises(DebugOnlyError):
+        session.set_forced_ai_action("fold")
+    with pytest.raises(DebugOnlyError):
+        session.set_always_show_hands(True)
+    with pytest.raises(DebugOnlyError):
+        await session.force_end_round()
+
+
+@pytest.mark.asyncio
+async def test_forced_fold_makes_every_ai_seat_fold(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+
+    session = GameSession.new("Dylan", debug=True)
+    session.set_forced_ai_action("fold")
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await asyncio.sleep(0.005)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            action = "check_or_call" if legal.can_check_or_call else "fold"
+            session.submit_human_action(action, None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    ai_actions = [
+        e for e in ws.events if e["type"] == "player_action" and e["player_id"] != session.human_player_id
+    ]
+    assert ai_actions, "expected at least one AI action"
+    assert any(e["action"] == "fold" for e in ai_actions), "expected at least one forced fold"
+    for e in ai_actions:
+        # the lone legal exception: the big blind can't fold when nobody has
+        # raised (nothing to fold to) -- it falls back to checking for free
+        if e["action"] != "fold":
+            assert e["action"] == "check_or_call" and e["call_amount"] == 0
+
+
+@pytest.mark.asyncio
+async def test_forced_all_in_makes_every_ai_seat_shove_or_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every forced-all-in AI either shoves (bet_or_raise_to) or, once it's
+    already covered by an earlier shove and can't raise any further, calls --
+    either way it should never fold or leave itself with anything left."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+
+    session = GameSession.new("Dylan", debug=True)
+    session.set_forced_ai_action("all_in")
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await asyncio.sleep(0.005)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            action = "check_or_call" if legal.can_check_or_call else "fold"
+            session.submit_human_action(action, None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    ai_actions = [
+        e for e in ws.events if e["type"] == "player_action" and e["player_id"] != session.human_player_id
+    ]
+    assert ai_actions, "expected at least one AI action"
+    for e in ai_actions:
+        assert e["action"] in ("bet_or_raise_to", "check_or_call")
+
+
+@pytest.mark.asyncio
+async def test_always_show_hands_reveals_a_folded_seats_cards(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+
+    session = GameSession.new("Dylan", debug=True)
+    session.set_forced_ai_action("fold")
+    session.set_always_show_hands(True)
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await asyncio.sleep(0.005)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            action = "check_or_call" if legal.can_check_or_call else "fold"
+            session.submit_human_action(action, None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    player_actions = [e for e in ws.events if e["type"] == "player_action"]
+    assert player_actions
+    last_hand = player_actions[-1]["state"]["hand"]
+    folded_seat = next(s for s in last_hand["seats"] if s["folded"])
+    assert folded_seat["hole_cards"] is not None
+
+
+@pytest.mark.asyncio
+async def test_force_end_round_forfeits_the_hand_and_restarts_the_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+
+    session = GameSession.new("Dylan", debug=True)
+    session.set_forced_ai_action("call")  # keeps chips flowing into the pot
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    # give the loop a chance to actually deal into hand #1 -- force_end_round
+    # should work regardless of exactly where mid-hand this lands
+    for _ in range(200):
+        await asyncio.sleep(0.005)
+        if session.tournament.current_hand is not None:
+            break
+    assert session.tournament.current_hand is not None
+
+    hand_count_before = session.tournament.hand_count
+    await session.force_end_round()
+
+    assert session.tournament.hand_count >= hand_count_before + 1
+    assert session.task is not None, "the loop should have restarted itself for the next hand"
+    hand_results = [e for e in ws.events if e["type"] == "hand_result"]
+    assert hand_results, "expected the forfeited hand to be broadcast as a hand_result"
+    assert hand_results[-1]["winners"] == []  # nobody is awarded a forfeited pot
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+
+@pytest.mark.asyncio
+async def test_force_end_round_is_a_noop_between_hands(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Calling end round when no hand is actually in progress (e.g. before
+    the loop has even started, or during the post-result display pause)
+    shouldn't fabricate a hand_result, but should still leave the loop able
+    to keep going."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+
+    session = GameSession.new("Dylan", debug=True)
+    assert session.tournament.current_hand is None  # no hand dealt yet at all
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+
+    await session.force_end_round()
+
+    assert ws.events == [], "nothing was in progress, so nothing should have been broadcast"
+    assert session.task is not None, "the loop should have started for the first hand"
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task

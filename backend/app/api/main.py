@@ -7,8 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .. import config
-from .schemas import ActionRequest, NewTournamentRequest, NewTournamentResponse
-from .session import GameSession, HumanTurnError, SESSIONS
+from .schemas import (
+    ActionRequest,
+    AlwaysShowHandsRequest,
+    ForcedActionRequest,
+    NewTournamentRequest,
+    NewTournamentResponse,
+)
+from .session import DebugOnlyError, GameSession, HumanTurnError, SESSIONS
 
 app = FastAPI(title="AI Poker Table")
 
@@ -41,10 +47,12 @@ def get_session(tournament_id: str) -> GameSession:
 
 @app.post("/tournament/new", response_model=NewTournamentResponse)
 async def new_tournament(body: NewTournamentRequest) -> NewTournamentResponse:
-    session = GameSession.new(body.human_name)
+    session = GameSession.new(body.human_name, debug=body.debug)
     SESSIONS[session.tournament_id] = session
     session.start()
-    return NewTournamentResponse(tournament_id=session.tournament_id, human_player_id=session.human_player_id)
+    return NewTournamentResponse(
+        tournament_id=session.tournament_id, human_player_id=session.human_player_id, is_debug=session.is_debug
+    )
 
 
 @app.post("/tournament/{tournament_id}/action")
@@ -54,6 +62,39 @@ async def submit_action(tournament_id: str, body: ActionRequest) -> dict:
         session.submit_human_action(body.action, body.amount)
     except HumanTurnError as exc:
         raise HTTPException(400, str(exc)) from exc
+    return {"ok": True}
+
+
+@app.post("/tournament/{tournament_id}/debug/forced_action")
+async def set_forced_action(tournament_id: str, body: ForcedActionRequest) -> dict:
+    session = get_session(tournament_id)
+    try:
+        session.set_forced_ai_action(body.mode)
+    except DebugOnlyError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True}
+
+
+@app.post("/tournament/{tournament_id}/debug/always_show_hands")
+async def set_always_show_hands(tournament_id: str, body: AlwaysShowHandsRequest) -> dict:
+    session = get_session(tournament_id)
+    try:
+        session.set_always_show_hands(body.enabled)
+    except DebugOnlyError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    await session.broadcast_snapshot()
+    return {"ok": True}
+
+
+@app.post("/tournament/{tournament_id}/debug/end_round")
+async def end_round(tournament_id: str) -> dict:
+    session = get_session(tournament_id)
+    try:
+        await session.force_end_round()
+    except DebugOnlyError as exc:
+        raise HTTPException(403, str(exc)) from exc
     return {"ok": True}
 
 
