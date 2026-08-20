@@ -48,7 +48,7 @@ function StartOverlay({
           handCount={0}
           smallBlind={PLACEHOLDER_SMALL_BLIND}
           bigBlind={PLACEHOLDER_BIG_BLIND}
-          handsUntilNextLevel={10}
+          orbitsUntilNextLevel={2}
           players={PLACEHOLDER_PLAYERS}
           humanPlayerId="human"
         />
@@ -176,7 +176,7 @@ function GameScreen({
         handCount={publicState.hand_count}
         smallBlind={publicState.small_blind}
         bigBlind={publicState.big_blind}
-        handsUntilNextLevel={publicState.hands_until_next_level}
+        orbitsUntilNextLevel={publicState.orbits_until_next_level}
         players={publicState.players}
         humanPlayerId={humanPlayerId}
       />

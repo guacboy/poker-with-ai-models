@@ -80,6 +80,22 @@ function formatActionLabel(
   }
 }
 
+// A street change (community cards just dealt, whether bundled into a
+// player_action or delivered as its own board_dealt stage of a suspenseful
+// all-in runout) makes every seat's leftover check/call/raise label from the
+// previous betting round stale -- including the action that closed out that
+// round, since it belongs to the street that just ended, not the one that
+// just started. A "Folded" label is the one exception -- it should stick
+// around for the rest of the hand, same as the seat's dimmed styling does.
+function foldedOnlyLabels(
+  labels: Record<string, string>,
+  seats: PublicHand["seats"] | undefined
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(labels).filter(([playerId]) => seats?.find((s) => s.player_id === playerId)?.folded === true)
+  );
+}
+
 function reducer(state: GameSocketState, action: Action): GameSocketState {
   switch (action.kind) {
     case "connected":
@@ -108,25 +124,22 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
         case "awaiting_action":
           return { ...state, actorView: event.view };
         case "board_dealt":
-          // a suspenseful runout stage (e.g. everyone's all-in) -- just
-          // refresh the board/seat snapshot, nothing else about the hand changed
-          return { ...state, publicState: event.state, lastHandSnapshot: event.state.hand };
+          // a suspenseful runout stage (e.g. everyone's all-in) -- refresh
+          // the board/seat snapshot and clear stale action labels the same
+          // way a street change bundled into player_action would
+          return {
+            ...state,
+            publicState: event.state,
+            lastHandSnapshot: event.state.hand,
+            lastActionLabelByPlayer: foldedOnlyLabels(state.lastActionLabelByPlayer, event.state.hand?.seats),
+          };
         case "player_action": {
           const priorStreet = state.publicState?.hand?.street_index ?? null;
           const newStreet = event.state.hand?.street_index ?? null;
-          // a street change (community cards just dealt) makes every other
-          // seat's leftover check/call/raise label from the previous betting
-          // round stale -- but a "Folded" label should stick around for the
-          // rest of the hand, same as the seat's dimmed styling does.
-          const labelsBase =
-            newStreet !== priorStreet
-              ? Object.fromEntries(
-                  Object.entries(state.lastActionLabelByPlayer).filter(([playerId]) => {
-                    const seat = event.state.hand?.seats.find((s) => s.player_id === playerId);
-                    return seat?.folded === true;
-                  })
-                )
-              : state.lastActionLabelByPlayer;
+          const streetChanged = newStreet !== priorStreet;
+          const labelsBase = streetChanged
+            ? foldedOnlyLabels(state.lastActionLabelByPlayer, event.state.hand?.seats)
+            : state.lastActionLabelByPlayer;
           // the live, in-hand stack (not PublicState.players[].stack, which only
           // reflects stack-at-start-of-hand until finish_hand() runs) is what
           // actually tells us whether this action put them all in
@@ -139,16 +152,18 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
             // place so the controls stay visible (disabled) until it's the
             // human's turn again
             lastHandSnapshot: event.state.hand,
-            lastActionLabelByPlayer: {
-              ...labelsBase,
-              [event.player_id]: formatActionLabel(
-                event.action,
-                event.amount,
-                event.call_amount,
-                resultingStack,
-                event.state.big_blind
-              ),
-            },
+            lastActionLabelByPlayer: streetChanged
+              ? labelsBase
+              : {
+                  ...labelsBase,
+                  [event.player_id]: formatActionLabel(
+                    event.action,
+                    event.amount,
+                    event.call_amount,
+                    resultingStack,
+                    event.state.big_blind
+                  ),
+                },
             lastPlayerAction: {
               id: `${event.player_id}-${Date.now()}-${Math.random()}`,
               playerId: event.player_id,

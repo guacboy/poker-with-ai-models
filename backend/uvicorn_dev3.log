@@ -1,0 +1,233 @@
+INFO:     Started server process [3168]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8123 (Press CTRL+C to quit)
+INFO:     127.0.0.1:60447 - "GET /images/claude.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59567 - "GET /images/gpt.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54043 - "GET /images/deepseek.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50914 - "GET /images/grok.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63127 - "GET /images/gemini.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52032 - "OPTIONS /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52032 - "POST /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60447 - "GET /sounds/betting-1.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:63127 - "GET /sounds/check.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:59567 - "GET /sounds/betting-3.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:54043 - "GET /sounds/betting-2.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:50914 - "GET /sounds/cards.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:60447 - "GET /sounds/crowd-gasp.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:54043 - "GET /sounds/folding.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:52339 - "WebSocket /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:52032 - "OPTIONS /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57939 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57939 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57939 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57939 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57939 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57939 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57939 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:57939 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60575 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62049 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:62049 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:62049 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:62049 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:62049 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:62049 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:62049 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:62049 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:62049 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62049 - "POST /tournament/38f81bb2-fe7a-4240-83f8-4148830a7c09/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53954 - "GET /images/claude.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63298 - "GET /images/gpt.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49926 - "GET /images/gemini.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53639 - "GET /images/deepseek.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53691 - "GET /images/grok.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51232 - "OPTIONS /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51232 - "POST /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53954 - "GET /sounds/betting-1.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:63298 - "GET /sounds/betting-3.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:53639 - "GET /sounds/betting-2.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:53691 - "GET /sounds/check.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:49926 - "GET /sounds/cards.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:53954 - "GET /sounds/crowd-gasp.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:49926 - "GET /sounds/folding.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:49260 - "WebSocket /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:51232 - "OPTIONS /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61131 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61570 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61570 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61570 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61570 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61570 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61570 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61570 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61570 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51505 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51505 - "POST /tournament/0a1fdfca-028e-4d4c-b157-fefcb31bc629/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54108 - "GET /images/gpt.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53138 - "GET /images/claude.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52692 - "GET /images/deepseek.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50375 - "GET /images/gemini.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61518 - "GET /images/grok.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55412 - "OPTIONS /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55412 - "POST /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53138 - "GET /sounds/betting-1.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:52692 - "GET /sounds/betting-2.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:61518 - "GET /sounds/check.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:50375 - "GET /sounds/cards.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:54108 - "GET /sounds/betting-3.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:53138 - "GET /sounds/crowd-gasp.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:50375 - "GET /sounds/folding.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:55995 - "WebSocket /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:55412 - "OPTIONS /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54930 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56671 - "POST /tournament/c1f77cab-90d4-4391-9eaa-0b0364937553/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50503 - "GET /images/claude.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56590 - "GET /images/gpt.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49244 - "GET /images/deepseek.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63274 - "GET /images/gemini.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57351 - "GET /images/grok.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58908 - "OPTIONS /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58908 - "POST /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49244 - "GET /sounds/betting-2.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:56590 - "GET /sounds/betting-3.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:50503 - "GET /sounds/betting-1.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:63274 - "GET /sounds/check.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:57351 - "GET /sounds/cards.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:50503 - "GET /sounds/crowd-gasp.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:63274 - "GET /sounds/folding.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:52100 - "WebSocket /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:58908 - "OPTIONS /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:52045 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61707 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61707 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61707 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61707 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61707 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61707 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:61707 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61707 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58279 - "POST /tournament/2e11fdea-eee6-4fe2-bb07-661f10303777/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61709 - "GET /images/claude.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54188 - "GET /images/deepseek.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53033 - "GET /images/gpt.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63540 - "GET /images/gemini.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60208 - "GET /images/grok.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53263 - "OPTIONS /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53263 - "POST /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61709 - "GET /sounds/betting-1.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:60208 - "GET /sounds/cards.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:63540 - "GET /sounds/check.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:53033 - "GET /sounds/betting-3.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:54188 - "GET /sounds/betting-2.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:60208 - "GET /sounds/crowd-gasp.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:61709 - "GET /sounds/folding.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:56560 - "WebSocket /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:53263 - "OPTIONS /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54060 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60960 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58466 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58466 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58466 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58466 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58466 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58466 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:58466 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54018 - "POST /tournament/4fbbb8fe-ceb2-46f6-9353-daf41c254c8a/action HTTP/1.1" 200 OK

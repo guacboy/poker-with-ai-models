@@ -30,7 +30,7 @@ BLIND_SCHEDULE = [
     (1_600, 3_200),
     (2_000, 4_000),
 ]
-HANDS_PER_BLIND_LEVEL = 10
+ORBITS_PER_BLIND_LEVEL = 2  # one orbit = the button returning to someone who already held it
 
 # Antes. "none" is the only mode wired up today; "big_blind" (BB posts one ante
 # covering the table) and "every_player" (each player posts individually) are

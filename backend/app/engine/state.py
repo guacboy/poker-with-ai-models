@@ -87,7 +87,7 @@ def view_public(
         "blind_level": tournament.blind_level,
         "small_blind": tournament.blinds[0],
         "big_blind": tournament.blinds[1],
-        "hands_until_next_level": tournament.hands_until_next_level,
+        "orbits_until_next_level": tournament.orbits_until_next_level,
         "is_over": tournament.is_over,
         "winner_player_id": tournament.winner.id if tournament.winner else None,
         "players": [

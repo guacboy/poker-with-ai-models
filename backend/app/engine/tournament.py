@@ -46,6 +46,11 @@ class Tournament:
     blind_level: int = 0
     current_hand: hand_module.Hand | None = None
     last_bust_events: list[dict] = field(default_factory=list)
+    orbits_completed_this_level: int = 0
+    # player ids who have held the button since the last orbit boundary --
+    # an orbit completes the moment the button returns to someone already in
+    # here (see `_track_orbit`)
+    orbit_seen_button_ids: set[str] = field(default_factory=set)
 
     @classmethod
     def new(cls, player_specs: list[tuple[str, str, str]]) -> "Tournament":
@@ -80,8 +85,8 @@ class Tournament:
         return rules.blinds_for_level(self.blind_level)
 
     @property
-    def hands_until_next_level(self) -> int:
-        return rules.HANDS_PER_BLIND_LEVEL - (self.hand_count % rules.HANDS_PER_BLIND_LEVEL)
+    def orbits_until_next_level(self) -> int:
+        return rules.ORBITS_PER_BLIND_LEVEL - self.orbits_completed_this_level
 
     # -- hand lifecycle -----------------------------------------------------
 
@@ -113,8 +118,24 @@ class Tournament:
             button_player = self._next_active_from(self.button_index)
         self.button_index = self.players.index(button_player)
 
+        self._track_orbit(button_player.id)
+
         btn_pos = active.index(button_player)
         return active[btn_pos + 1 :] + active[: btn_pos + 1]
+
+    def _track_orbit(self, button_player_id: str) -> None:
+        """An orbit completes the instant the button returns to someone who
+        already held it since the last orbit boundary -- naturally shrinks as
+        players bust out, same as a real orbit would. `ORBITS_PER_BLIND_LEVEL`
+        completed orbits bumps the blind level."""
+        if button_player_id in self.orbit_seen_button_ids:
+            self.orbit_seen_button_ids = {button_player_id}
+            self.orbits_completed_this_level += 1
+            if self.orbits_completed_this_level >= rules.ORBITS_PER_BLIND_LEVEL:
+                self.blind_level += 1
+                self.orbits_completed_this_level = 0
+        else:
+            self.orbit_seen_button_ids.add(button_player_id)
 
     def _next_active_from(self, start_index: int) -> Player:
         n = len(self.players)
@@ -205,16 +226,14 @@ class Tournament:
     def _end_of_hand_bookkeeping(self, hand: hand_module.Hand) -> None:
         """Shared by a normal `finish_hand` and a debug `forfeit_current_hand`:
         bust/rebuy/elimination checks against whatever each player's stack
-        ended up at, plus advancing the button and blind level."""
+        ended up at, plus advancing the button (blind-level advancement is
+        tracked separately, by button orbits -- see `_track_orbit`)."""
         for pid in hand.seat_player_ids:
             if self.player(pid).stack == 0:
                 self._handle_bust(pid)
 
         self.button_index = (self.button_index + 1) % len(self.players)
-
         self.hand_count += 1
-        if self.hand_count % rules.HANDS_PER_BLIND_LEVEL == 0:
-            self.blind_level += 1
 
     def _handle_bust(self, player_id: str) -> None:
         player = self.player(player_id)
