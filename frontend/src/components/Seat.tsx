@@ -1,6 +1,7 @@
 import { PlayingCard } from "./PlayingCard";
 import { SpeechBubble } from "./SpeechBubble";
 import type { PlayerKind, PlayerStatus } from "../types/game";
+import { avatarUrlFor } from "../utils/avatars";
 import { formatBB } from "../utils/formatChips";
 
 export interface SeatViewModel {
@@ -25,13 +26,18 @@ export interface SeatViewModel {
 
 interface SeatProps {
   seat: SeatViewModel;
-  isHuman: boolean;
   speechMessage: string | null;
   positionClassName: string;
   bigBlind: number;
 }
 
-export function Seat({ seat, isHuman, speechMessage, positionClassName, bigBlind }: SeatProps) {
+export function Seat({ seat, speechMessage, positionClassName, bigBlind }: SeatProps) {
+  const avatarUrl = avatarUrlFor(seat.playerId);
+  // the gpt.png source has a lot of transparent padding around the mark
+  // itself (unlike the other bots' tighter-cropped logos), so `contain`
+  // leaves it looking noticeably smaller -- `cover` zooms in to fill the
+  // circle instead, which crops evenly since the mark is centered in frame
+  const avatarFit = seat.playerId === "openai" ? " seat__avatar--cover" : "";
   const classes = [
     "seat",
     positionClassName,
@@ -57,8 +63,8 @@ export function Seat({ seat, isHuman, speechMessage, positionClassName, bigBlind
       </div>
       <div className="seat__info">
         <div className="seat__name">
+          {avatarUrl && <img className={`seat__avatar${avatarFit}`} src={avatarUrl} alt="" />}
           {seat.name}
-          {isHuman && <span className="seat__you-tag">you</span>}
         </div>
         {seat.lastActionLabel && <div className="seat__last-action">{seat.lastActionLabel}</div>}
         <div className="seat__stack">{formatBB(seat.stack, bigBlind)}</div>

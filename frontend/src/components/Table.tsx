@@ -13,7 +13,6 @@ const POSITION_CLASSES = [
 
 interface TableProps {
   seats: SeatViewModel[]; // fixed table order; index 0 must be the human
-  humanPlayerId: string;
   speechMessages: Record<string, string | null>;
   boardCards: string[];
   potTotal: number;
@@ -23,7 +22,6 @@ interface TableProps {
 
 export function Table({
   seats,
-  humanPlayerId,
   speechMessages,
   boardCards,
   potTotal,
@@ -41,7 +39,6 @@ export function Table({
         <Seat
           key={seat.playerId}
           seat={seat}
-          isHuman={seat.playerId === humanPlayerId}
           speechMessage={speechMessages[seat.playerId] ?? null}
           positionClassName={POSITION_CLASSES[i % POSITION_CLASSES.length]}
           bigBlind={bigBlind}

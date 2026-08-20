@@ -26,6 +26,11 @@ SOUNDS_DIR = Path(__file__).resolve().parents[3] / "assets" / "sounds"
 if SOUNDS_DIR.is_dir():
     app.mount("/sounds", StaticFiles(directory=SOUNDS_DIR), name="sounds")
 
+# static bot profile pictures -- same reasoning as /sounds above
+IMAGES_DIR = Path(__file__).resolve().parents[3] / "assets" / "png"
+if IMAGES_DIR.is_dir():
+    app.mount("/images", StaticFiles(directory=IMAGES_DIR), name="images")
+
 
 def get_session(tournament_id: str) -> GameSession:
     session = SESSIONS.get(tournament_id)

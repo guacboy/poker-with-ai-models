@@ -117,7 +117,6 @@ function GameScreen({ tournamentId, humanPlayerId }: { tournamentId: string; hum
       <div className="game-main">
         <Table
           seats={seats}
-          humanPlayerId={humanPlayerId}
           speechMessages={speechMessages}
           boardCards={displayHand?.board_cards ?? []}
           potTotal={displayHand?.pot_total ?? 0}

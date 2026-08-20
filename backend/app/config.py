@@ -4,7 +4,6 @@ Nothing here talks to a provider SDK directly -- `ai/factory.py` reads these
 values to decide which player implementation to instantiate per seat.
 """
 
-# TODO(feat): add profile pictures for the bots in assets/png/ and adjust the size to match evenly
 # TODO(feat): add check.mp3 sound to when a player checks
 # TODO(chore): get rid of the main screen. instead, have the game in the background as dimmed and unclickable until the start button is clicked, brightening the game and play as normal. on top of the dimmed background, and just have the start game button present.
 
@@ -44,7 +43,7 @@ AI_THINKING_DELAY_SECONDS = float(os.getenv("AI_THINKING_DELAY_SECONDS", "1.2"))
 
 # After a spoken trash-talk line, how much longer to hold before moving on to
 # the next player's turn, on top of however long the line itself takes to play.
-AUDIO_TRAILING_DELAY_SECONDS = float(os.getenv("AUDIO_TRAILING_DELAY_SECONDS", "0.5"))
+AUDIO_TRAILING_DELAY_SECONDS = float(os.getenv("AUDIO_TRAILING_DELAY_SECONDS", "0.3"))
 
 # How long to keep the finished hand (winner glow, board, revealed cards) on
 # screen before dealing the next one.

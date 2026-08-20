@@ -14,6 +14,14 @@ SOUND_FILES = [
     "folding.mp3",
 ]
 
+AVATAR_FILES = [
+    "claude.png",
+    "gpt.png",
+    "deepseek.png",
+    "gemini.png",
+    "grok.png",
+]
+
 
 @pytest.fixture
 def client() -> TestClient:
@@ -30,4 +38,17 @@ def test_sound_effect_files_are_served(client: TestClient, filename: str) -> Non
 
 def test_unknown_sound_file_is_404(client: TestClient) -> None:
     resp = client.get("/sounds/does-not-exist.mp3")
+    assert resp.status_code == 404
+
+
+@pytest.mark.parametrize("filename", AVATAR_FILES)
+def test_avatar_files_are_served(client: TestClient, filename: str) -> None:
+    resp = client.get(f"/images/{filename}")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "image/png"
+    assert len(resp.content) > 0
+
+
+def test_unknown_avatar_file_is_404(client: TestClient) -> None:
+    resp = client.get("/images/does-not-exist.png")
     assert resp.status_code == 404

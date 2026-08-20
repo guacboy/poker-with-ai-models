@@ -296,12 +296,21 @@
   gap: 4px;
 }
 
-.seat__you-tag {
-  font-size: 10px;
-  color: var(--text-dim);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0 4px;
+.seat__avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  /* the source PNGs have transparent backgrounds and wildly inconsistent
+     native sizes/aspect ratios -- a fixed-size circle with a dark backing
+     fill and `object-fit: contain` normalizes every bot to the same look
+     regardless of what the source image actually looks like */
+  background: #2a2f3a;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.seat__avatar--cover {
+  object-fit: cover;
 }
 
 .seat__last-action {
