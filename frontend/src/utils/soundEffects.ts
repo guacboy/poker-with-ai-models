@@ -38,7 +38,10 @@ export interface SoundEffectResult {
  * that shoves for *more* than any all-in seen so far this hand (a bigger
  * stack re-raising over the top) -- a short stack merely calling an existing
  * all-in doesn't re-trigger it, but still gets a betting sound instead so
- * the chips going in aren't silent. */
+ * the chips going in aren't silent.
+ *
+ * "check.mp3" plays for a free check_or_call (call_amount of 0 -- no chips
+ * actually go in), which otherwise wouldn't make any sound at all. */
 export function soundEffectForEvent(
   event: ServerEvent,
   prev: SoundEffectTrackingState
@@ -64,28 +67,29 @@ export function soundEffectForEvent(
 
       if (event.action === "fold") {
         sounds.push("folding.mp3");
+      } else if (event.action === "check_or_call" && event.call_amount === 0) {
+        sounds.push("check.mp3");
       } else {
-        const placedBet = event.action === "bet_or_raise_to" || event.call_amount > 0;
-        if (placedBet) {
-          const resultingStack =
-            event.state.hand?.seats.find((s) => s.player_id === event.player_id)?.stack ?? -1;
-          if (resultingStack === 0) {
-            // a stack of 0 means they just shoved everything they had --
-            // their PublicPlayer.stack (unchanged since hand_started) is
-            // exactly how big that shove was
-            const startingStack =
-              event.state.players.find((p) => p.player_id === event.player_id)?.stack ?? 0;
-            if (startingStack > maxAllInStack) {
-              sounds.push("crowd-gasp.mp3");
-              maxAllInStack = startingStack;
-            } else {
-              // covering/calling an existing bigger all-in still puts chips
-              // in, it just isn't a new biggest shove worth a crowd gasp
-              sounds.push(randomBettingSound());
-            }
+        // reaching here means either a bet/raise, or a call over a real
+        // amount -- chips are always going in
+        const resultingStack =
+          event.state.hand?.seats.find((s) => s.player_id === event.player_id)?.stack ?? -1;
+        if (resultingStack === 0) {
+          // a stack of 0 means they just shoved everything they had --
+          // their PublicPlayer.stack (unchanged since hand_started) is
+          // exactly how big that shove was
+          const startingStack =
+            event.state.players.find((p) => p.player_id === event.player_id)?.stack ?? 0;
+          if (startingStack > maxAllInStack) {
+            sounds.push("crowd-gasp.mp3");
+            maxAllInStack = startingStack;
           } else {
+            // covering/calling an existing bigger all-in still puts chips
+            // in, it just isn't a new biggest shove worth a crowd gasp
             sounds.push(randomBettingSound());
           }
+        } else {
+          sounds.push(randomBettingSound());
         }
       }
 

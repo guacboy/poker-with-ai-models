@@ -12,6 +12,7 @@ SOUND_FILES = [
     "cards.mp3",
     "crowd-gasp.mp3",
     "folding.mp3",
+    "check.mp3",
 ]
 
 AVATAR_FILES = [
