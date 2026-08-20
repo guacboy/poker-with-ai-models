@@ -373,6 +373,12 @@
   border-radius: 10px;
   padding: 6px 10px;
   font-size: 12px;
+  /* an absolutely positioned box with no explicit width shrink-wraps to
+     min-content instead of growing up to max-width -- for the side bubbles
+     below (positioned via `right`/`left` with no matching `left`/`right`)
+     that collapses to one word per line even with room to spare, so width
+     has to be stated explicitly for max-width to actually take effect */
+  width: max-content;
   max-width: 160px;
   text-align: center;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
@@ -389,7 +395,10 @@
   border-top-color: white;
 }
 
-/* Left-side seats: bubble sits to the left of the seat, tail points right at it */
+/* Left-side seats: bubble sits to the left of the seat, tail points right at
+   it -- wider than the default top bubble since there's a full side of the
+   table for it to breathe into, instead of wrapping dialogue into a cramped
+   narrow column */
 .seat-pos-4 .speech-bubble,
 .seat-pos-5 .speech-bubble {
   bottom: auto;
@@ -400,6 +409,7 @@
   margin-bottom: 0;
   margin-right: 10px;
   animation-name: bubble-in-left;
+  max-width: 220px;
 }
 
 .seat-pos-4 .speech-bubble__tail,
@@ -412,7 +422,8 @@
   border-left-color: white;
 }
 
-/* Right-side seats: bubble sits to the right of the seat, tail points left at it */
+/* Right-side seats: bubble sits to the right of the seat, tail points left at
+   it -- same widening as the left-side bubbles above */
 .seat-pos-1 .speech-bubble,
 .seat-pos-2 .speech-bubble {
   bottom: auto;
@@ -423,6 +434,7 @@
   margin-bottom: 0;
   margin-left: 10px;
   animation-name: bubble-in-right;
+  max-width: 220px;
 }
 
 .seat-pos-1 .speech-bubble__tail,
