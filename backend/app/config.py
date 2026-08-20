@@ -4,8 +4,6 @@ Nothing here talks to a provider SDK directly -- `ai/factory.py` reads these
 values to decide which player implementation to instantiate per seat.
 """
 
-# TODO(chore): get rid of the main screen. instead, have the game in the background as dimmed and unclickable until the start button is clicked, brightening the game and play as normal. on top of the dimmed background, and just have the start game button present.
-
 from __future__ import annotations
 
 import os

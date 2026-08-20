@@ -4,6 +4,12 @@ import { ActionControls } from "./components/ActionControls";
 import type { SeatViewModel } from "./components/Seat";
 import { Table } from "./components/Table";
 import { TournamentStatus } from "./components/TournamentStatus";
+import {
+  PLACEHOLDER_BIG_BLIND,
+  PLACEHOLDER_PLAYERS,
+  PLACEHOLDER_SEATS,
+  PLACEHOLDER_SMALL_BLIND,
+} from "./data/placeholderTable";
 import { useAudioQueue } from "./hooks/useAudioQueue";
 import { createTournament, useGameSocket } from "./hooks/useGameSocket";
 
@@ -13,11 +19,45 @@ const FALLBACK_SPEECH_BUBBLE_DURATION_MS = 4500;
 // longer the line lingers on screen after it finishes playing.
 const AUDIO_TRAILING_DELAY_MS = 1000;
 
-function StartScreen({ onStart }: { onStart: () => void }) {
+// Shows the real table layout (dimmed, inert) as a backdrop instead of a
+// blank splash screen -- `starting` lifts the dim and hides the button the
+// instant it's clicked, so the table visibly brightens while the tournament
+// is created underneath, rather than cutting straight to a loading screen.
+function StartOverlay({ onStart, starting }: { onStart: () => void; starting: boolean }) {
   return (
-    <div className="start-screen">
-      <h1>AI Poker Table</h1>
-      <button onClick={onStart}>Start Tournament</button>
+    <div className="start-overlay">
+      <div
+        className={`start-overlay__backdrop game-screen${starting ? " start-overlay__backdrop--bright" : ""}`}
+        aria-hidden="true"
+        inert={!starting ? true : undefined}
+      >
+        <TournamentStatus
+          handCount={0}
+          smallBlind={PLACEHOLDER_SMALL_BLIND}
+          bigBlind={PLACEHOLDER_BIG_BLIND}
+          handsUntilNextLevel={10}
+          players={PLACEHOLDER_PLAYERS}
+          humanPlayerId="human"
+        />
+        <div className="game-main">
+          <Table
+            seats={PLACEHOLDER_SEATS}
+            speechMessages={{}}
+            boardCards={[]}
+            potTotal={0}
+            bigBlind={PLACEHOLDER_BIG_BLIND}
+            winningHandLabel={null}
+          />
+          <ActionControls legalActions={null} disabled bigBlind={PLACEHOLDER_BIG_BLIND} onAction={() => {}} />
+        </div>
+      </div>
+      {!starting && (
+        <div className="start-overlay__scrim">
+          <button className="start-overlay__button" onClick={onStart}>
+            Start Tournament
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -151,13 +191,21 @@ export default function App() {
   const [session, setSession] = useState<{ tournamentId: string; humanPlayerId: string } | null>(
     null
   );
+  const [starting, setStarting] = useState(false);
 
   if (!session) {
     return (
-      <StartScreen
+      <StartOverlay
+        starting={starting}
         onStart={async () => {
-          const result = await createTournament();
-          setSession(result);
+          setStarting(true);
+          try {
+            const result = await createTournament();
+            setSession(result);
+          } catch (err) {
+            console.error(err);
+            setStarting(false);
+          }
         }}
       />
     );
