@@ -4,7 +4,19 @@ No-Limit Texas Hold'em against 5 AI opponents (Claude, OpenAI, DeepSeek, Gemini,
 
 ## Tournament format
 
-6-max, 100 BB starting stack, blinds increase every 10 hands, up to 3 buy-ins per player (human and AI alike, fixed rebuy size), no antes. All of this is tunable in [`backend/app/rules.py`](backend/app/rules.py).
+6-max, 100 BB starting stack, blinds increase every 2 orbits (the button returning to someone who already held it counts as one orbit -- this naturally speeds up as players bust), up to 3 buy-ins per player (human and AI alike, fixed rebuy size), no antes. All of this is tunable in [`backend/app/rules.py`](backend/app/rules.py).
+
+## AI trash talk
+
+Every AI action can carry a short spoken line (synthesized via Kokoro and read aloud), with the prompt pushing for disrespectful, high-ego, no-holding-back trash talk. Whether a given action actually talks is a street-scaled probability -- rare and mostly quiet preflop, ramping up through the flop/turn/river, with an extra bump on the turn/river when a genuinely risky all-in moment is in play (see `talk_chance` in [`backend/app/ai/base.py`](backend/app/ai/base.py)). A hand's winner is separately guaranteed a chance to gloat once the pot's settled, via its own post-hand reaction call -- always on a real showdown, and also on a fold-out win that made it to the turn or river (too early on preflop/flop to be worth bragging about).
+
+## Debug Mode
+
+The start screen has a smaller "Debug Mode" button below "Start Tournament". It plays entirely against randomized mock players and never touches any AI provider or API key -- no API usage happens until you actually click "Start Tournament" for a real game. A debug session shows a control widget in the top-right corner:
+
+- **Force All-Ins / Force Call / Force Check / Force Fold** -- pins every AI seat's decision to one action (clamped to whatever's actually legal)
+- **Always Show Hands** -- reveals every seat's hole cards regardless of fold/showdown status
+- **End Round** -- immediately forfeits the in-progress hand (any chips already in the pot stay forfeited) and deals the next one
 
 ## Setup
 
