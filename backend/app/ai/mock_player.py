@@ -31,6 +31,14 @@ WIN_REACTION_LINES = [
     None,  # even a guaranteed reaction slot can choose to stay quiet
 ]
 
+LOSS_REACTION_LINES = [
+    "Unbelievable. Absolutely rigged.",
+    "You got lucky, that's all.",
+    "I had that pot won, this game is a joke.",
+    "Whatever, run it back.",
+    None,  # even a guaranteed reaction slot can choose to stay quiet
+]
+
 
 class MockPlayer:
     def __init__(self, player_id: str, display_name: str, seed: int | None = None):
@@ -63,3 +71,6 @@ class MockPlayer:
 
     async def react_to_win(self, view: dict, hand_label: str | None, amount_won: int) -> str | None:
         return self._rng.choice(WIN_REACTION_LINES)
+
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
+        return self._rng.choice(LOSS_REACTION_LINES)

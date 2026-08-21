@@ -32,6 +32,9 @@ class AlwaysRaiseWithMessagePlayer:
     async def react_to_win(self, view: dict, hand_label: str, amount_won: int) -> str | None:
         return "gg"
 
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
+        return "rigged"
+
 
 class AlwaysFoldPlayer:
     """Folds whenever folding is actually legal (i.e. there's a real bet to
@@ -50,6 +53,9 @@ class AlwaysFoldPlayer:
 
     async def react_to_win(self, view: dict, hand_label: str, amount_won: int) -> str | None:
         return "gg"
+
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
+        return "rigged"
 
 
 class AlwaysShoveAllInPlayer:
@@ -74,6 +80,9 @@ class AlwaysShoveAllInPlayer:
     async def react_to_win(self, view: dict, hand_label: str, amount_won: int) -> str | None:
         return f"Winning with {hand_label}!"
 
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
+        return f"Losing with {hand_label}? Rigged."
+
 
 class StubPlayer:
     """A deterministic AI stub sharing one mutable flag across every seat:
@@ -96,6 +105,9 @@ class StubPlayer:
 
     async def react_to_win(self, view: dict, hand_label: str, amount_won: int) -> str | None:
         return "gg"
+
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
+        return "rigged"
 
 
 class CallUntilTurnThenBetAndFoldPlayer:
@@ -126,6 +138,9 @@ class CallUntilTurnThenBetAndFoldPlayer:
 
     async def react_to_win(self, view: dict, hand_label: str | None, amount_won: int) -> str | None:
         return "Everyone folded, easy money."
+
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
+        return "rigged"
 
 
 class FakeWebSocket:
@@ -965,3 +980,182 @@ async def test_force_end_round_is_a_noop_between_hands(monkeypatch: pytest.Monke
     session.task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await session.task
+
+
+class FakeHandForSoreLoser:
+    """Duck-typed stand-in for engine.hand.Hand -- covers what
+    _sore_loser_target reads, plus (for the broadcast test) everything
+    engine.state.view_for_actor needs to build a prompt view. Lets these be
+    tested directly against hand-crafted showdown scenarios instead of
+    fighting real card RNG."""
+
+    def __init__(self, seat_player_ids: list[str], folded_ids: set[str], revealed: dict[str, list[str]]):
+        self.seat_player_ids = seat_player_ids
+        self._folded_ids = folded_ids
+        self._revealed = revealed
+        self.board_cards = ["Ah", "2c", "9d", "Kh", "3s"]
+        self.pot_total = 1000
+        self.street_index = 3
+        self.starting_stacks = dict.fromkeys(seat_player_ids, 10000)
+        self.current_actor_id = None
+
+    def is_folded(self, player_id: str) -> bool:
+        return player_id in self._folded_ids
+
+    def revealed_hole_cards(self) -> dict[str, list[str]]:
+        return self._revealed
+
+    def winning_hand_label(self, player_id: str) -> str:
+        return "One pair"
+
+    def hole_cards_of(self, player_id: str) -> list[str]:
+        return self._revealed.get(player_id, ["??", "??"])
+
+    def stack_of(self, player_id: str) -> int:
+        return 5000
+
+    def bet_of(self, player_id: str) -> int:
+        return 0
+
+    def legal_actions(self):
+        from app.engine.hand import LegalActions
+
+        return LegalActions(
+            can_fold=False, can_check_or_call=False, can_bet_or_raise=False,
+            call_amount=0, min_bet_to=None, max_bet_to=None,
+        )
+
+
+AI_ID = config.AI_SEATS[0][0]
+OTHER_AI_ID = config.AI_SEATS[1][0]
+
+
+def test_sore_loser_target_fires_when_ai_loses_heads_up_to_human_on_the_river() -> None:
+    session = GameSession.new("Dylan", debug=True)
+    hand = FakeHandForSoreLoser(
+        seat_player_ids=[config.HUMAN_PLAYER_ID, AI_ID],
+        folded_ids=set(),
+        revealed={config.HUMAN_PLAYER_ID: ["Ah", "Kh"], AI_ID: ["2c", "7d"]},
+    )
+    net_results = {config.HUMAN_PLAYER_ID: 500, AI_ID: -500}
+
+    target = session._sore_loser_target(hand, winners=[config.HUMAN_PLAYER_ID], net_results=net_results, board_len_at_end=5)
+
+    assert target == AI_ID
+
+
+def test_sore_loser_target_is_none_with_a_third_player_still_live() -> None:
+    session = GameSession.new("Dylan", debug=True)
+    hand = FakeHandForSoreLoser(
+        seat_player_ids=[config.HUMAN_PLAYER_ID, AI_ID, OTHER_AI_ID],
+        folded_ids=set(),
+        revealed={config.HUMAN_PLAYER_ID: ["Ah", "Kh"], AI_ID: ["2c", "7d"], OTHER_AI_ID: ["3c", "8d"]},
+    )
+    net_results = {config.HUMAN_PLAYER_ID: 500, AI_ID: -250, OTHER_AI_ID: -250}
+
+    target = session._sore_loser_target(hand, winners=[config.HUMAN_PLAYER_ID], net_results=net_results, board_len_at_end=5)
+
+    assert target is None
+
+
+def test_sore_loser_target_is_none_on_a_fold_out() -> None:
+    session = GameSession.new("Dylan", debug=True)
+    hand = FakeHandForSoreLoser(
+        seat_player_ids=[config.HUMAN_PLAYER_ID, AI_ID],
+        folded_ids={AI_ID},
+        revealed={},
+    )
+    net_results = {config.HUMAN_PLAYER_ID: 500, AI_ID: -500}
+
+    target = session._sore_loser_target(hand, winners=[config.HUMAN_PLAYER_ID], net_results=net_results, board_len_at_end=5)
+
+    assert target is None
+
+
+def test_sore_loser_target_is_none_when_it_never_reached_the_turn() -> None:
+    session = GameSession.new("Dylan", debug=True)
+    hand = FakeHandForSoreLoser(
+        seat_player_ids=[config.HUMAN_PLAYER_ID, AI_ID],
+        folded_ids=set(),
+        revealed={config.HUMAN_PLAYER_ID: ["Ah", "Kh"], AI_ID: ["2c", "7d"]},
+    )
+    net_results = {config.HUMAN_PLAYER_ID: 500, AI_ID: -500}
+
+    target = session._sore_loser_target(hand, winners=[config.HUMAN_PLAYER_ID], net_results=net_results, board_len_at_end=3)
+
+    assert target is None
+
+
+def test_sore_loser_target_is_none_when_the_ai_actually_won() -> None:
+    session = GameSession.new("Dylan", debug=True)
+    hand = FakeHandForSoreLoser(
+        seat_player_ids=[config.HUMAN_PLAYER_ID, AI_ID],
+        folded_ids=set(),
+        revealed={config.HUMAN_PLAYER_ID: ["2c", "7d"], AI_ID: ["Ah", "Kh"]},
+    )
+    net_results = {config.HUMAN_PLAYER_ID: -500, AI_ID: 500}
+
+    target = session._sore_loser_target(hand, winners=[AI_ID], net_results=net_results, board_len_at_end=5)
+
+    assert target is None
+
+
+def test_sore_loser_target_is_none_on_a_chopped_pot() -> None:
+    session = GameSession.new("Dylan", debug=True)
+    hand = FakeHandForSoreLoser(
+        seat_player_ids=[config.HUMAN_PLAYER_ID, AI_ID],
+        folded_ids=set(),
+        revealed={config.HUMAN_PLAYER_ID: ["Ah", "Kh"], AI_ID: ["Ac", "Kc"]},
+    )
+    net_results = {config.HUMAN_PLAYER_ID: 0, AI_ID: 0}
+
+    target = session._sore_loser_target(hand, winners=[], net_results=net_results, board_len_at_end=5)
+
+    assert target is None
+
+
+def test_sore_loser_target_is_none_when_the_ai_mucked_without_showing() -> None:
+    session = GameSession.new("Dylan", debug=True)
+    hand = FakeHandForSoreLoser(
+        seat_player_ids=[config.HUMAN_PLAYER_ID, AI_ID],
+        folded_ids=set(),
+        revealed={config.HUMAN_PLAYER_ID: ["Ah", "Kh"]},  # AI mucked face down, never shown
+    )
+    net_results = {config.HUMAN_PLAYER_ID: 500, AI_ID: -500}
+
+    target = session._sore_loser_target(hand, winners=[config.HUMAN_PLAYER_ID], net_results=net_results, board_len_at_end=5)
+
+    assert target is None
+
+
+@pytest.mark.asyncio
+async def test_broadcast_loss_reaction_fires_and_returns_pacing_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(config, "AUDIO_TRAILING_DELAY_SECONDS", 0.1)
+
+    async def fake_synthesize(text: str, voice: str):
+        return "fakebase64", 0.02
+
+    monkeypatch.setattr(session_module, "synthesize", fake_synthesize)
+
+    session = GameSession.new("Dylan", debug=True)
+    session.ai_players[AI_ID] = AlwaysShoveAllInPlayer(AI_ID, "Claude")
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+
+    hand = FakeHandForSoreLoser(
+        seat_player_ids=[config.HUMAN_PLAYER_ID, AI_ID],
+        folded_ids=set(),
+        revealed={config.HUMAN_PLAYER_ID: ["Ah", "Kh"], AI_ID: ["2c", "7d"]},
+    )
+    net_results = {config.HUMAN_PLAYER_ID: 500, AI_ID: -500}
+
+    wait = await session._broadcast_loss_reaction(
+        hand, winners=[config.HUMAN_PLAYER_ID], net_results=net_results, board_len_at_end=5
+    )
+
+    assert wait == pytest.approx(0.12)
+    loss_reactions = [e for e in ws.events if e["type"] == "loss_reaction"]
+    assert len(loss_reactions) == 1
+    assert loss_reactions[0]["player_id"] == AI_ID
+    assert loss_reactions[0]["message"] == "Losing with One pair? Rigged."
+    assert loss_reactions[0]["audio_base64"] == "fakebase64"

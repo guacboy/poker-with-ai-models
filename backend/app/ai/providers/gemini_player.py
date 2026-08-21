@@ -6,9 +6,10 @@ from google import genai
 from google.genai import types
 
 from ..base import (
+    REACTION_JSON_SCHEMA,
     RESPONSE_JSON_SCHEMA,
-    WIN_REACTION_JSON_SCHEMA,
     ActionResult,
+    build_loss_reaction_prompt,
     build_prompt,
     build_win_reaction_prompt,
 )
@@ -39,7 +40,19 @@ class GeminiPlayer:
             contents=build_win_reaction_prompt(view, hand_label, amount_won),
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_json_schema=WIN_REACTION_JSON_SCHEMA,
+                response_json_schema=REACTION_JSON_SCHEMA,
+            ),
+        )
+        data = json.loads(response.text)
+        return data.get("message")
+
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
+        response = await self._client.aio.models.generate_content(
+            model=self._model,
+            contents=build_loss_reaction_prompt(view, hand_label, amount_lost),
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=REACTION_JSON_SCHEMA,
             ),
         )
         data = json.loads(response.text)

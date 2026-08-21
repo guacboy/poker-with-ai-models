@@ -12,9 +12,10 @@ import json
 from openai import AsyncOpenAI
 
 from ..base import (
+    REACTION_JSON_SCHEMA,
     RESPONSE_JSON_SCHEMA,
-    WIN_REACTION_JSON_SCHEMA,
     ActionResult,
+    build_loss_reaction_prompt,
     build_prompt,
     build_win_reaction_prompt,
 )
@@ -23,9 +24,9 @@ SCHEMA_INSTRUCTIONS = (
     "Respond with ONLY a single JSON object (no markdown, no other text) matching "
     f"this schema:\n{json.dumps(RESPONSE_JSON_SCHEMA)}"
 )
-WIN_REACTION_SCHEMA_INSTRUCTIONS = (
+REACTION_SCHEMA_INSTRUCTIONS = (
     "Respond with ONLY a single JSON object (no markdown, no other text) matching "
-    f"this schema:\n{json.dumps(WIN_REACTION_JSON_SCHEMA)}"
+    f"this schema:\n{json.dumps(REACTION_JSON_SCHEMA)}"
 )
 
 
@@ -60,8 +61,21 @@ class OpenAICompatiblePlayer:
         response = await self._client.chat.completions.create(
             model=self._model,
             messages=[
-                {"role": "system", "content": WIN_REACTION_SCHEMA_INSTRUCTIONS},
+                {"role": "system", "content": REACTION_SCHEMA_INSTRUCTIONS},
                 {"role": "user", "content": build_win_reaction_prompt(view, hand_label, amount_won)},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=150,
+        )
+        data = json.loads(response.choices[0].message.content)
+        return data.get("message")
+
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=[
+                {"role": "system", "content": REACTION_SCHEMA_INSTRUCTIONS},
+                {"role": "user", "content": build_loss_reaction_prompt(view, hand_label, amount_lost)},
             ],
             response_format={"type": "json_object"},
             max_tokens=150,

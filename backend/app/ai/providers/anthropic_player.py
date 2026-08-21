@@ -3,15 +3,17 @@ from __future__ import annotations
 from anthropic import AsyncAnthropic
 
 from ..base import (
+    REACTION_JSON_SCHEMA,
     RESPONSE_JSON_SCHEMA,
-    WIN_REACTION_JSON_SCHEMA,
     ActionResult,
+    build_loss_reaction_prompt,
     build_prompt,
     build_win_reaction_prompt,
 )
 
 TOOL_NAME = "poker_action"
 WIN_REACTION_TOOL_NAME = "win_reaction"
+LOSS_REACTION_TOOL_NAME = "loss_reaction"
 
 
 class AnthropicPlayer:
@@ -52,10 +54,29 @@ class AnthropicPlayer:
                 {
                     "name": WIN_REACTION_TOOL_NAME,
                     "description": "React to winning this hand.",
-                    "input_schema": WIN_REACTION_JSON_SCHEMA,
+                    "input_schema": REACTION_JSON_SCHEMA,
                 }
             ],
             tool_choice={"type": "tool", "name": WIN_REACTION_TOOL_NAME},
+        )
+        for block in response.content:
+            if block.type == "tool_use":
+                return block.input.get("message")
+        return None
+
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
+        response = await self._client.messages.create(
+            model=self._model,
+            max_tokens=150,
+            messages=[{"role": "user", "content": build_loss_reaction_prompt(view, hand_label, amount_lost)}],
+            tools=[
+                {
+                    "name": LOSS_REACTION_TOOL_NAME,
+                    "description": "React to losing this hand.",
+                    "input_schema": REACTION_JSON_SCHEMA,
+                }
+            ],
+            tool_choice={"type": "tool", "name": LOSS_REACTION_TOOL_NAME},
         )
         for block in response.content:
             if block.type == "tool_use":

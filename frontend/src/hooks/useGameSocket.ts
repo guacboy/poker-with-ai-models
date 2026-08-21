@@ -188,10 +188,12 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
             winningHandLabel: event.winning_hand_label,
           };
         case "win_reaction":
-          // a guaranteed post-showdown reaction -- reuses lastPlayerAction so
-          // the same speech-bubble/audio-queue effect in App.tsx picks it up,
-          // but doesn't touch publicState/lastActionLabelByPlayer since no
-          // actual poker action happened
+        case "loss_reaction":
+          // a guaranteed post-showdown reaction (gloating or sore-loser alike)
+          // -- reuses lastPlayerAction so the same speech-bubble/audio-queue
+          // effect in App.tsx picks it up, but doesn't touch
+          // publicState/lastActionLabelByPlayer since no actual poker action
+          // happened
           return {
             ...state,
             lastPlayerAction: {

@@ -107,5 +107,12 @@ export type ServerEvent =
       audio_base64: string | null;
       audio_duration: number | null;
     }
+  | {
+      type: "loss_reaction";
+      player_id: string;
+      message: string;
+      audio_base64: string | null;
+      audio_duration: number | null;
+    }
   | { type: "tournament_over"; winner_player_id: string | null }
   | { type: "error"; message: string };

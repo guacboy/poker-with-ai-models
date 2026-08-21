@@ -291,6 +291,63 @@ class GameSession:
                 total_dialogue_seconds += wait
         return total_dialogue_seconds
 
+    def _sore_loser_target(
+        self, hand, winners: list[str], net_results: dict[str, int], board_len_at_end: int
+    ) -> str | None:
+        """The AI seat (if any) that should get a guaranteed sore-loser
+        reaction this hand: the hand reached a real showdown on the turn or
+        river, exactly two seats were still live when it was decided, one of
+        them is the human, and the AI lost (not a chop) with its cards shown.
+        Anything short of that -- a 3-way pot, a fold-out, a preflop/flop-only
+        board, a split, or a mucked-without-showing loss -- returns None."""
+        revealed = hand.revealed_hole_cards()
+        if not revealed or board_len_at_end < 4:
+            return None
+        live = [pid for pid in hand.seat_player_ids if not hand.is_folded(pid)]
+        if len(live) != 2 or self.human_player_id not in live:
+            return None
+        ai_pid = next(pid for pid in live if pid != self.human_player_id)
+        if ai_pid in winners or net_results.get(ai_pid, 0) >= 0 or ai_pid not in revealed:
+            return None
+        return ai_pid
+
+    async def _broadcast_loss_reaction(
+        self, hand, winners: list[str], net_results: dict[str, int], board_len_at_end: int
+    ) -> float:
+        """Mirrors _broadcast_win_reactions for the losing side of a heads-up
+        showdown: when an AI just lost a 1-on-1 pot to the human on the turn
+        or river, it's guaranteed a sore-loser reaction instead of the usual
+        probabilistic action talk. Returns the dialogue seconds spent, same
+        as _broadcast_win_reactions, to fold into the post-hand pacing."""
+        ai_pid = self._sore_loser_target(hand, winners, net_results, board_len_at_end)
+        if ai_pid is None:
+            return 0.0
+
+        hand_label = hand.winning_hand_label(ai_pid)
+        view = state_mod.view_for_actor(self.tournament, hand, ai_pid)
+        try:
+            message = await self.ai_players[ai_pid].react_to_loss(view, hand_label, -net_results[ai_pid])
+        except Exception:
+            message = None
+        if not message:
+            return 0.0
+
+        audio_base64, audio_duration = await self._synthesize_for(ai_pid, message)
+        await self.broadcast(
+            {
+                "type": "loss_reaction",
+                "player_id": ai_pid,
+                "message": message,
+                "audio_base64": audio_base64,
+                "audio_duration": audio_duration,
+            }
+        )
+        if audio_duration is None:
+            return 0.0
+        wait = audio_duration + config.AUDIO_TRAILING_DELAY_SECONDS
+        await asyncio.sleep(wait)
+        return wait
+
     async def _run(self) -> None:
         try:
             while not self.tournament.is_over:
@@ -380,6 +437,9 @@ class GameSession:
                 board_len_at_end = len(hand.board_cards)
 
                 reveal_dialogue_seconds = await self._broadcast_win_reactions(
+                    hand, winners, net_results, board_len_at_end
+                )
+                reveal_dialogue_seconds += await self._broadcast_loss_reaction(
                     hand, winners, net_results, board_len_at_end
                 )
 

@@ -53,6 +53,8 @@ class AIPlayer(Protocol):
 
     async def react_to_win(self, view: dict, hand_label: str | None, amount_won: int) -> str | None: ...
 
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None: ...
+
 
 def build_prompt(view: dict) -> str:
     """Renders the shared, persona-neutral prompt from an actor view dict."""
@@ -202,12 +204,12 @@ def is_talk_eligible(action: str, view: dict, amount: int | None = None) -> bool
     return random.random() < talk_chance(action, view, amount)
 
 
-WIN_REACTION_JSON_SCHEMA: dict = {
+REACTION_JSON_SCHEMA: dict = {
     "type": "object",
     "properties": {
         "message": {
             "type": ["string", "null"],
-            "description": f"Short reaction to winning the hand (<= {MAX_MESSAGE_WORDS} words). Omit or null to stay quiet.",
+            "description": f"Short reaction to the hand's outcome (<= {MAX_MESSAGE_WORDS} words). Omit or null to stay quiet.",
         },
     },
     "required": ["message"],
@@ -243,4 +245,24 @@ Amount won: {amount_won}
 React to winning in a short (<= {MAX_MESSAGE_WORDS} words) line -- it will be read aloud to \
 the table. Gloat hard: be disrespectful and arrogant toward whoever you just beat, don't hold \
 back on insults, foul language is fine. Leave it null if you'd rather stay quiet.
+"""
+
+
+def build_loss_reaction_prompt(view: dict, hand_label: str, amount_lost: int) -> str:
+    """Renders the prompt for the guaranteed sore-loser reaction -- fired only
+    when this bot just lost a heads-up hand at showdown to the human on the
+    turn or river (see GameSession._broadcast_loss_reaction). Like
+    `build_win_reaction_prompt`, this is a separate post-hand call: nothing
+    about losing is knowable until the showdown result is in."""
+    return f"""You just lost a heads-up hand of No-Limit Texas Hold'em at showdown to the human \
+player.
+Your losing hand: {hand_label}
+
+Your hole cards: {', '.join(view['your_hole_cards'])}
+Board: {', '.join(view['board_cards']) if view['board_cards'] else '(preflop)'}
+Amount lost: {amount_lost}
+
+React to losing in a short (<= {MAX_MESSAGE_WORDS} words) line -- it will be read aloud to the \
+table. Be a sore loser about it: bitter, defensive, maybe blame luck or the cards, don't hold \
+back on insults toward the human, foul language is fine. Leave it null if you'd rather stay quiet.
 """
