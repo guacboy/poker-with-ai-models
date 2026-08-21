@@ -22,6 +22,15 @@ TRASH_TALK_LINES = [
     None,
 ]
 
+WIN_REACTION_LINES = [
+    "That's how it's done.",
+    "Run it again, I'll take it again.",
+    "Chip up!",
+    "Never doubted it for a second.",
+    "Thanks for the donation.",
+    None,  # even a guaranteed reaction slot can choose to stay quiet
+]
+
 
 class MockPlayer:
     def __init__(self, player_id: str, display_name: str, seed: int | None = None):
@@ -51,3 +60,6 @@ class MockPlayer:
 
         message = self._rng.choice(TRASH_TALK_LINES)
         return ActionResult(action=action, amount=amount, message=message)
+
+    async def react_to_win(self, view: dict, hand_label: str | None, amount_won: int) -> str | None:
+        return self._rng.choice(WIN_REACTION_LINES)

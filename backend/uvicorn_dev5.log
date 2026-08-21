@@ -1,0 +1,29 @@
+INFO:     Started server process [35212]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8123 (Press CTRL+C to quit)
+INFO:     127.0.0.1:60301 - "GET /images/gpt.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49829 - "GET /images/deepseek.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49557 - "GET /images/claude.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50942 - "GET /images/gemini.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62403 - "GET /images/grok.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63346 - "OPTIONS /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63346 - "POST /tournament/new HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49557 - "GET /sounds/betting-1.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:49829 - "GET /sounds/betting-2.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:60301 - "GET /sounds/cards.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:50942 - "GET /sounds/betting-3.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:62403 - "GET /sounds/check.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:50942 - "GET /sounds/crowd-gasp.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:60301 - "GET /sounds/folding.mp3 HTTP/1.1" 206 Partial Content
+INFO:     127.0.0.1:65034 - "WebSocket /tournament/cd4638ec-286f-4eba-8349-9388302f8bb0/ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:63346 - "OPTIONS /tournament/cd4638ec-286f-4eba-8349-9388302f8bb0/debug/forced_action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59694 - "POST /tournament/cd4638ec-286f-4eba-8349-9388302f8bb0/debug/forced_action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59694 - "OPTIONS /tournament/cd4638ec-286f-4eba-8349-9388302f8bb0/debug/always_show_hands HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63346 - "POST /tournament/cd4638ec-286f-4eba-8349-9388302f8bb0/debug/always_show_hands HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63346 - "OPTIONS /tournament/cd4638ec-286f-4eba-8349-9388302f8bb0/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59694 - "POST /tournament/cd4638ec-286f-4eba-8349-9388302f8bb0/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59694 - "POST /tournament/cd4638ec-286f-4eba-8349-9388302f8bb0/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65345 - "POST /tournament/cd4638ec-286f-4eba-8349-9388302f8bb0/action HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65345 - "POST /tournament/cd4638ec-286f-4eba-8349-9388302f8bb0/action HTTP/1.1" 200 OK

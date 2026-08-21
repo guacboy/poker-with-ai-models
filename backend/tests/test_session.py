@@ -29,6 +29,9 @@ class AlwaysRaiseWithMessagePlayer:
             return ActionResult(action="check_or_call", message="hi")
         return ActionResult(action="fold", message="hi")
 
+    async def react_to_win(self, view: dict, hand_label: str, amount_won: int) -> str | None:
+        return "gg"
+
 
 class AlwaysFoldPlayer:
     """Folds whenever folding is actually legal (i.e. there's a real bet to
@@ -44,6 +47,9 @@ class AlwaysFoldPlayer:
         legal = view["legal_actions"]
         action = "fold" if legal["can_fold"] else "check_or_call"
         return ActionResult(action=action)
+
+    async def react_to_win(self, view: dict, hand_label: str, amount_won: int) -> str | None:
+        return "gg"
 
 
 class AlwaysShoveAllInPlayer:
@@ -65,6 +71,9 @@ class AlwaysShoveAllInPlayer:
             return ActionResult(action="check_or_call")
         return ActionResult(action="fold")
 
+    async def react_to_win(self, view: dict, hand_label: str, amount_won: int) -> str | None:
+        return f"Winning with {hand_label}!"
+
 
 class StubPlayer:
     """A deterministic AI stub sharing one mutable flag across every seat:
@@ -84,6 +93,39 @@ class StubPlayer:
         if legal["can_check_or_call"]:
             return ActionResult(action="check_or_call")
         return ActionResult(action="fold")
+
+    async def react_to_win(self, view: dict, hand_label: str, amount_won: int) -> str | None:
+        return "gg"
+
+
+class CallUntilTurnThenBetAndFoldPlayer:
+    """Checks/calls through preflop and flop (never folds, never raises) so
+    the hand always reaches the turn with everyone still in. On the turn (or
+    later), the first seat asked to act bets; every seat after that folds to
+    it -- deterministically produces a fold-out win that made it past the
+    flop, for testing the turn/river fold-out reaction rule."""
+
+    def __init__(self, player_id: str, display_name: str, shared: dict):
+        self.player_id = player_id
+        self.display_name = display_name
+        self._shared = shared
+
+    async def decide(self, view: dict) -> ActionResult:
+        legal = view["legal_actions"]
+        street = view["street_index"]
+        if street is not None and street >= 2:  # turn or river
+            if not self._shared["bet"] and legal["can_bet_or_raise"]:
+                self._shared["bet"] = True
+                return ActionResult(action="bet_or_raise_to", amount=legal["min_bet_to"])
+            if legal["can_fold"]:
+                return ActionResult(action="fold")
+            return ActionResult(action="check_or_call")
+        if legal["can_check_or_call"]:
+            return ActionResult(action="check_or_call")
+        return ActionResult(action="fold")
+
+    async def react_to_win(self, view: dict, hand_label: str | None, amount_won: int) -> str | None:
+        return "Everyone folded, easy money."
 
 
 class FakeWebSocket:
@@ -366,6 +408,288 @@ async def test_showdown_hand_result_names_the_winning_hand_category(monkeypatch:
         "Straight flush",
     }
     assert label in valid_labels, f"expected a real hand category, got {label!r}"
+
+
+@pytest.mark.asyncio
+async def test_showdown_win_triggers_a_guaranteed_win_reaction_for_every_ai_winner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every other action's talk is a probabilistic roll (see
+    is_talk_eligible/talk_chance), but a real showdown win is guaranteed a
+    reaction -- a separate call made only once the winner(s) are known, since
+    that's not decided until after all betting (and every decide() call) is
+    already over."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+    monkeypatch.setattr(config, "BOARD_REVEAL_DELAY_SECONDS", 0.01)
+    monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.01)
+
+    async def fake_synthesize(text: str, voice: str):
+        return "fakebase64", 0.01
+
+    monkeypatch.setattr(session_module, "synthesize", fake_synthesize)
+
+    session = GameSession.new("Dylan")
+    session.ai_players = {
+        p.id: AlwaysShoveAllInPlayer(p.id, p.name) for p in session.tournament.players if p.kind == "ai"
+    }
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await asyncio.sleep(0.01)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            if legal.can_bet_or_raise:
+                session.submit_human_action("bet_or_raise_to", legal.max_bet_to)
+            else:
+                session.submit_human_action("check_or_call", None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    hand_results = [e for e in ws.events if e["type"] == "hand_result"]
+    assert hand_results, "expected a hand_result event"
+    result = hand_results[0]
+    ai_winners = {pid for pid in result["winners"] if pid != config.HUMAN_PLAYER_ID}
+
+    win_reactions = [e for e in ws.events if e["type"] == "win_reaction"]
+    assert {e["player_id"] for e in win_reactions} == ai_winners
+    for event in win_reactions:
+        assert event["message"] == f"Winning with {result['winning_hand_label']}!"
+        assert event["audio_base64"] == "fakebase64"
+
+
+@pytest.mark.asyncio
+async def test_long_reveal_dialogue_only_adds_one_second_past_display_delay(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When the reveal dialogue itself already runs longer than
+    HAND_RESULT_DISPLAY_SECONDS, the next hand shouldn't wait the full
+    display delay on top of that -- just one more second once the dialogue's
+    actually done, not display_delay + dialogue stacked together."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+    monkeypatch.setattr(config, "BOARD_REVEAL_DELAY_SECONDS", 0.01)
+    monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.05)
+    monkeypatch.setattr(config, "AUDIO_TRAILING_DELAY_SECONDS", 0.1)
+
+    fake_duration = 1.0  # comfortably longer than HAND_RESULT_DISPLAY_SECONDS
+    requested_sleeps: list[float] = []
+    real_sleep = asyncio.sleep
+
+    async def fake_synthesize(text: str, voice: str):
+        return "fakebase64", fake_duration
+
+    async def spying_sleep(delay: float, *args, **kwargs):
+        requested_sleeps.append(delay)
+        await real_sleep(min(delay, 0.01))
+
+    monkeypatch.setattr(session_module, "synthesize", fake_synthesize)
+    monkeypatch.setattr(asyncio, "sleep", spying_sleep)
+
+    session = GameSession.new("Dylan")
+    session.ai_players = {
+        p.id: AlwaysShoveAllInPlayer(p.id, p.name) for p in session.tournament.players if p.kind == "ai"
+    }
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await real_sleep(0.005)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            if legal.can_bet_or_raise:
+                session.submit_human_action("bet_or_raise_to", legal.max_bet_to)
+            else:
+                session.submit_human_action("check_or_call", None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    # give the loop a scheduling turn to actually reach (and record) the
+    # post-hand_result delay sleep, the statement right after the broadcast
+    await real_sleep(0.05)
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    win_reactions = [e for e in ws.events if e["type"] == "win_reaction"]
+    assert win_reactions, "expected at least one AI winner to react"
+
+    assert any(delay == pytest.approx(1.0) for delay in requested_sleeps), (
+        f"expected a 1-second sleep once the (longer-than-display-delay) reveal "
+        f"dialogue finished, got {requested_sleeps}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_short_reveal_dialogue_tops_up_to_the_standard_display_delay(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When the reveal dialogue finishes well within HAND_RESULT_DISPLAY_SECONDS,
+    the next hand should still wait out the rest of the standard delay -- not
+    skip straight to the flat 1-second bump meant for the long-dialogue case."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+    monkeypatch.setattr(config, "BOARD_REVEAL_DELAY_SECONDS", 0.01)
+    monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.5)
+    monkeypatch.setattr(config, "AUDIO_TRAILING_DELAY_SECONDS", 0.1)
+
+    fake_duration = 0.05  # comfortably shorter than HAND_RESULT_DISPLAY_SECONDS
+    requested_sleeps: list[float] = []
+    real_sleep = asyncio.sleep
+
+    async def fake_synthesize(text: str, voice: str):
+        return "fakebase64", fake_duration
+
+    async def spying_sleep(delay: float, *args, **kwargs):
+        requested_sleeps.append(delay)
+        await real_sleep(min(delay, 0.01))
+
+    monkeypatch.setattr(session_module, "synthesize", fake_synthesize)
+    monkeypatch.setattr(asyncio, "sleep", spying_sleep)
+
+    session = GameSession.new("Dylan")
+    session.ai_players = {
+        p.id: AlwaysShoveAllInPlayer(p.id, p.name) for p in session.tournament.players if p.kind == "ai"
+    }
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await real_sleep(0.005)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            if legal.can_bet_or_raise:
+                session.submit_human_action("bet_or_raise_to", legal.max_bet_to)
+            else:
+                session.submit_human_action("check_or_call", None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    await real_sleep(0.05)
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    hand_results = [e for e in ws.events if e["type"] == "hand_result"]
+    result = hand_results[0]
+    ai_winner_count = len([pid for pid in result["winners"] if pid != config.HUMAN_PLAYER_ID])
+    win_reactions = [e for e in ws.events if e["type"] == "win_reaction"]
+
+    dialogue_seconds = len(win_reactions) * (fake_duration + 0.1)
+    expected_final_sleep = 0.5 - dialogue_seconds if dialogue_seconds <= 0.5 else 1.0
+
+    assert any(delay == pytest.approx(expected_final_sleep, abs=0.02) for delay in requested_sleeps), (
+        f"expected a top-up sleep of ~{expected_final_sleep}s "
+        f"({len(win_reactions)}/{ai_winner_count} AI winners reacted), got {requested_sleeps}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_preflop_fold_out_win_never_triggers_a_win_reaction(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A walk that ends before/at the flop (everyone folds around to one
+    seat) is too early to be worth bragging about -- no win_reaction should
+    fire even though the winner is an AI seat."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+    monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.01)
+
+    session = GameSession.new("Dylan")
+    session.ai_players = {
+        p.id: AlwaysFoldPlayer(p.id, p.name) for p in session.tournament.players if p.kind == "ai"
+    }
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await asyncio.sleep(0.01)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            action = "fold" if legal.can_fold else "check_or_call"
+            session.submit_human_action(action, None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    hand_results = [e for e in ws.events if e["type"] == "hand_result"]
+    assert hand_results, "expected a hand_result event"
+    assert hand_results[0]["winning_hand_label"] is None
+
+    assert not any(e["type"] == "win_reaction" for e in ws.events)
+
+
+@pytest.mark.asyncio
+async def test_turn_or_river_fold_out_win_still_triggers_a_win_reaction(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A fold-out win that made it to the turn or river is still worth a
+    reaction, even without a hand category to cite (cards were never
+    shown) -- only a preflop/flop walk stays silent."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+    monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.01)
+
+    async def fake_synthesize(text: str, voice: str):
+        return "fakebase64", 0.01
+
+    monkeypatch.setattr(session_module, "synthesize", fake_synthesize)
+
+    session = GameSession.new("Dylan")
+    shared = {"bet": False}
+    session.ai_players = {
+        p.id: CallUntilTurnThenBetAndFoldPlayer(p.id, p.name, shared)
+        for p in session.tournament.players
+        if p.kind == "ai"
+    }
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(1000):
+        await asyncio.sleep(0.005)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            hand = session.tournament.current_hand
+            legal = hand.legal_actions()
+            street = hand.street_index
+            if street is not None and street >= 2:
+                if not shared["bet"] and legal.can_bet_or_raise:
+                    shared["bet"] = True
+                    session.submit_human_action("bet_or_raise_to", legal.min_bet_to)
+                elif legal.can_fold:
+                    session.submit_human_action("fold", None)
+                else:
+                    session.submit_human_action("check_or_call", None)
+            elif legal.can_check_or_call:
+                session.submit_human_action("check_or_call", None)
+            else:
+                session.submit_human_action("fold", None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    hand_results = [e for e in ws.events if e["type"] == "hand_result"]
+    assert hand_results, "expected a hand_result event"
+    result = hand_results[0]
+    assert result["winning_hand_label"] is None, "a fold-out never reaches a real showdown"
+    assert len(result["winners"]) == 1
+    winner_id = result["winners"][0]
+
+    win_reactions = [e for e in ws.events if e["type"] == "win_reaction"]
+    if winner_id == config.HUMAN_PLAYER_ID:
+        assert win_reactions == [], "the human doesn't get an AI reaction call"
+    else:
+        assert len(win_reactions) == 1
+        assert win_reactions[0]["player_id"] == winner_id
+        assert win_reactions[0]["message"] == "Everyone folded, easy money."
 
 
 @pytest.mark.asyncio

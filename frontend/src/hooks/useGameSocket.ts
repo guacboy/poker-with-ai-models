@@ -10,7 +10,9 @@ const WS_BASE = API_BASE.replace(/^http/, "ws");
 export interface PlayerActionEvent {
   id: string;
   playerId: string;
-  action: ActionName;
+  // null for a guaranteed post-showdown win reaction, which isn't tied to
+  // any poker action -- only the speech bubble/audio fields apply there
+  action: ActionName | null;
   amount: number | null;
   message: string | null;
   audioBase64: string | null;
@@ -184,6 +186,23 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
             publicState: event.state,
             handResultWinners: event.winners,
             winningHandLabel: event.winning_hand_label,
+          };
+        case "win_reaction":
+          // a guaranteed post-showdown reaction -- reuses lastPlayerAction so
+          // the same speech-bubble/audio-queue effect in App.tsx picks it up,
+          // but doesn't touch publicState/lastActionLabelByPlayer since no
+          // actual poker action happened
+          return {
+            ...state,
+            lastPlayerAction: {
+              id: `${event.player_id}-${Date.now()}-${Math.random()}`,
+              playerId: event.player_id,
+              action: null,
+              amount: null,
+              message: event.message,
+              audioBase64: event.audio_base64,
+              audioDuration: event.audio_duration,
+            },
           };
         case "tournament_over":
           return { ...state, tournamentOver: true, winnerPlayerId: event.winner_player_id };

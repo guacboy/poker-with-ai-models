@@ -9,10 +9,13 @@ providers must request both in one structured-output call.
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 from typing import Protocol
 
 MAX_MESSAGE_WORDS = 15
+
+PREFLOP, FLOP, TURN, RIVER = 0, 1, 2, 3
 
 RESPONSE_JSON_SCHEMA: dict = {
     "type": "object",
@@ -47,6 +50,8 @@ class AIPlayer(Protocol):
     display_name: str
 
     async def decide(self, view: dict) -> ActionResult: ...
+
+    async def react_to_win(self, view: dict, hand_label: str | None, amount_won: int) -> str | None: ...
 
 
 def build_prompt(view: dict) -> str:
@@ -124,24 +129,115 @@ def facing_a_raise(view: dict) -> bool:
     return current_bet_level > view["big_blind"]
 
 
-def is_talk_eligible(action: str, view: dict) -> bool:
-    """Whether an action is allowed to carry a spoken trash-talk message.
+# Chance an otherwise-quiet action (a free check, a preflop/flop blind-limp
+# call, or a fold that never put in anything beyond a forced blind) still
+# comes with a talk line anyway. Rises street by street so the table gets
+# chattier as the hand escalates -- preflop stays almost silent, river is a
+# coinflip.
+AMBIENT_TALK_CHANCE = {PREFLOP: 0.05, FLOP: 0.15, TURN: 0.30, RIVER: 0.50}
+# Same, but bumped further on turn/river specifically when a genuinely risky,
+# all-in moment is part of the picture (see `_is_risky_moment`) -- higher
+# stakes make even an otherwise-quiet check worth reacting to.
+AMBIENT_TALK_CHANCE_RISKY = {TURN: 0.55, RIVER: 0.75}
 
-    Talk is limited to meaningful moments: raising/re-raising (which covers
-    shoving all-in -- that's just a bet/raise for the player's whole stack),
-    calling an actual raise, and folding -- but only a fold that's actually
-    giving something up. A free check, a call that's really just
-    posting/limping for the unraised blind, and a preflop/flop fold from a
-    player who never put anything beyond a forced blind into this hand all
-    stay silent; there's nothing to react to.
+# Chance for an inherently "meaningful" action -- raising/shoving, a real
+# fold (giving something up), or calling an actual bet/raise. High but not
+# guaranteed, the same across every street, so the table doesn't chatter on
+# literally every single one.
+MEANINGFUL_TALK_CHANCE = 0.90
+# Turn/river + a risky, all-in moment bumps a meaningful action all the way
+# to certain -- reacting to (or making) a shove is always worth a line.
+MEANINGFUL_TALK_CHANCE_RISKY = 1.0
+
+
+def _is_risky_moment(action: str, amount: int | None, view: dict) -> bool:
+    """A turn/river moment worth extra excitement: this action is itself an
+    all-in shove, or some other still-live seat is already all-in and this
+    bot is reacting to that."""
+    legal = view["legal_actions"]
+    max_bet_to = legal.get("max_bet_to")
+    if action == "bet_or_raise_to" and amount is not None and max_bet_to is not None and amount >= max_bet_to:
+        return True
+    return any(
+        seat["player_id"] != view["your_player_id"] and not seat["folded"] and seat["stack"] == 0
+        for seat in view["seats"]
+    )
+
+
+def talk_chance(action: str, view: dict, amount: int | None = None) -> float:
+    """The probability (0-1) that `action` ends up carrying a spoken line.
+
+    Two tiers: a "meaningful" action (raising/shoving, a real fold, calling
+    an actual bet) is highly likely to talk but not guaranteed
+    (`MEANINGFUL_TALK_CHANCE`); anything otherwise silent gets a small,
+    street-scaled chance instead (`AMBIENT_TALK_CHANCE`). Both tiers get
+    bumped further on turn/river when a risky, all-in moment is in play.
     """
+    street = view["street_index"]
+    risky = street in (TURN, RIVER) and _is_risky_moment(action, amount, view)
+
+    def meaningful() -> float:
+        return MEANINGFUL_TALK_CHANCE_RISKY if risky else MEANINGFUL_TALK_CHANCE
+
+    def ambient() -> float:
+        return AMBIENT_TALK_CHANCE_RISKY[street] if risky else AMBIENT_TALK_CHANCE[street]
+
     if action == "fold":
-        if view["street_index"] in (0, 1):  # preflop, flop
+        if street in (PREFLOP, FLOP):
             own_seat = next(s for s in view["seats"] if s["player_id"] == view["your_player_id"])
-            return own_seat["voluntarily_invested"]
-        return True
+            return meaningful() if own_seat["voluntarily_invested"] else ambient()
+        return meaningful()  # turn/river folds always give something real up
     if action == "bet_or_raise_to":
-        return True
+        return meaningful()
     if action == "check_or_call":
-        return facing_a_raise(view)
-    return False
+        return meaningful() if facing_a_raise(view) else ambient()
+    return 0.0
+
+
+def is_talk_eligible(action: str, view: dict, amount: int | None = None) -> bool:
+    """Whether this action ends up carrying a spoken trash-talk message this
+    time -- a probabilistic roll against `talk_chance`, not a fixed rule."""
+    return random.random() < talk_chance(action, view, amount)
+
+
+WIN_REACTION_JSON_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "message": {
+            "type": ["string", "null"],
+            "description": f"Short reaction to winning the hand (<= {MAX_MESSAGE_WORDS} words). Omit or null to stay quiet.",
+        },
+    },
+    "required": ["message"],
+    "additionalProperties": False,
+}
+
+
+def build_win_reaction_prompt(view: dict, hand_label: str | None, amount_won: int) -> str:
+    """Renders the prompt for the guaranteed post-win reveal reaction -- a
+    separate, lighter-weight call made only after a hand's winner(s) are
+    already known, once betting is over. `decide()`'s prompt can't cover this:
+    it's built and answered before anyone knows who's going to win.
+
+    `hand_label` is None for a fold-out win that made it to the turn or
+    river (see GameSession._broadcast_win_reactions) -- nobody showed cards,
+    so there's no category to cite, just the fact that everyone folded.
+
+    Takes `amount_won` explicitly (the winner's own net gain this hand)
+    rather than reading `view['pot_total']` -- by the time this runs, the
+    hand has already finished and pokerkit may have already cleared the pot
+    internally, so `pot_total` can no longer be trusted to reflect what was
+    actually won."""
+    if hand_label is not None:
+        situation = f"You just won a hand of No-Limit Texas Hold'em at showdown.\nYour winning hand: {hand_label}"
+    else:
+        situation = "You just won a hand of No-Limit Texas Hold'em -- everyone else folded, so your cards were never shown."
+    return f"""{situation}
+
+Your hole cards: {', '.join(view['your_hole_cards'])}
+Board: {', '.join(view['board_cards']) if view['board_cards'] else '(preflop)'}
+Amount won: {amount_won}
+
+React to winning in a short (<= {MAX_MESSAGE_WORDS} words) line -- it will be read aloud to \
+the table. Leave it null if you'd rather stay quiet.
+"""

@@ -11,11 +11,21 @@ import json
 
 from openai import AsyncOpenAI
 
-from ..base import RESPONSE_JSON_SCHEMA, ActionResult, build_prompt
+from ..base import (
+    RESPONSE_JSON_SCHEMA,
+    WIN_REACTION_JSON_SCHEMA,
+    ActionResult,
+    build_prompt,
+    build_win_reaction_prompt,
+)
 
 SCHEMA_INSTRUCTIONS = (
     "Respond with ONLY a single JSON object (no markdown, no other text) matching "
     f"this schema:\n{json.dumps(RESPONSE_JSON_SCHEMA)}"
+)
+WIN_REACTION_SCHEMA_INSTRUCTIONS = (
+    "Respond with ONLY a single JSON object (no markdown, no other text) matching "
+    f"this schema:\n{json.dumps(WIN_REACTION_JSON_SCHEMA)}"
 )
 
 
@@ -45,3 +55,16 @@ class OpenAICompatiblePlayer:
         )
         data = json.loads(response.choices[0].message.content)
         return ActionResult(action=data["action"], amount=data.get("amount"), message=data.get("message"))
+
+    async def react_to_win(self, view: dict, hand_label: str | None, amount_won: int) -> str | None:
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=[
+                {"role": "system", "content": WIN_REACTION_SCHEMA_INSTRUCTIONS},
+                {"role": "user", "content": build_win_reaction_prompt(view, hand_label, amount_won)},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=150,
+        )
+        data = json.loads(response.choices[0].message.content)
+        return data.get("message")

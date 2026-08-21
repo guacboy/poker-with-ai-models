@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from anthropic import AsyncAnthropic
 
-from ..base import RESPONSE_JSON_SCHEMA, ActionResult, build_prompt
+from ..base import (
+    RESPONSE_JSON_SCHEMA,
+    WIN_REACTION_JSON_SCHEMA,
+    ActionResult,
+    build_prompt,
+    build_win_reaction_prompt,
+)
 
 TOOL_NAME = "poker_action"
+WIN_REACTION_TOOL_NAME = "win_reaction"
 
 
 class AnthropicPlayer:
@@ -35,3 +42,22 @@ class AnthropicPlayer:
                     action=data["action"], amount=data.get("amount"), message=data.get("message")
                 )
         raise RuntimeError("Anthropic response did not include a tool_use block")
+
+    async def react_to_win(self, view: dict, hand_label: str | None, amount_won: int) -> str | None:
+        response = await self._client.messages.create(
+            model=self._model,
+            max_tokens=150,
+            messages=[{"role": "user", "content": build_win_reaction_prompt(view, hand_label, amount_won)}],
+            tools=[
+                {
+                    "name": WIN_REACTION_TOOL_NAME,
+                    "description": "React to winning this hand.",
+                    "input_schema": WIN_REACTION_JSON_SCHEMA,
+                }
+            ],
+            tool_choice={"type": "tool", "name": WIN_REACTION_TOOL_NAME},
+        )
+        for block in response.content:
+            if block.type == "tool_use":
+                return block.input.get("message")
+        return None

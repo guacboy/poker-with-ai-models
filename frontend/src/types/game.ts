@@ -100,5 +100,12 @@ export type ServerEvent =
       bust_events: BustEvent[];
       state: PublicState;
     }
+  | {
+      type: "win_reaction";
+      player_id: string;
+      message: string;
+      audio_base64: string | null;
+      audio_duration: number | null;
+    }
   | { type: "tournament_over"; winner_player_id: string | null }
   | { type: "error"; message: string };

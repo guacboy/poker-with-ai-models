@@ -229,6 +229,60 @@ class GameSession:
             )
             await asyncio.sleep(config.BOARD_REVEAL_DELAY_SECONDS)
 
+    async def _broadcast_win_reactions(
+        self, hand, winners: list[str], net_results: dict[str, int], board_len_at_end: int
+    ) -> float:
+        """Guarantees a reaction line from each AI winner -- every other
+        action's talk is a probabilistic roll (see is_talk_eligible/talk_chance),
+        but the winner isn't known until betting is fully over, so this can't
+        be folded into any action's own decide() call; it's a separate call
+        made only now.
+
+        Always reacts on a real showdown (with the actual hand category to
+        cite), and also reacts on a fold-out win once it's made it to the
+        turn or river (no hand category to cite there -- cards were never
+        shown, just "everyone folded to you"). A fold-out win on preflop or
+        the flop stays silent -- too early to be worth bragging about.
+
+        Returns the total real seconds spent pacing around reaction audio, so
+        the caller can factor that into the post-hand display delay (see
+        _run's HAND_RESULT_DISPLAY_SECONDS handling)."""
+        revealed = hand.revealed_hole_cards()
+        is_showdown = bool(revealed)
+        if not is_showdown and board_len_at_end < 4:  # fold-out, preflop or flop
+            return 0.0
+
+        total_dialogue_seconds = 0.0
+        for pid in winners:
+            if self.tournament.player(pid).kind != "ai":
+                continue
+            hand_label = hand.winning_hand_label(pid) if pid in revealed else None
+            view = state_mod.view_for_actor(self.tournament, hand, pid)
+            try:
+                # provider APIs are flaky by nature -- a failed reaction just
+                # means silence, never a crashed tournament loop
+                message = await self.ai_players[pid].react_to_win(view, hand_label, net_results[pid])
+            except Exception:
+                message = None
+            if not message:
+                continue
+            audio = await synthesize(message, config.VOICE_BY_PLAYER_ID.get(pid, ""))
+            audio_base64, audio_duration = audio if audio else (None, None)
+            await self.broadcast(
+                {
+                    "type": "win_reaction",
+                    "player_id": pid,
+                    "message": message,
+                    "audio_base64": audio_base64,
+                    "audio_duration": audio_duration,
+                }
+            )
+            if audio_duration is not None:
+                wait = audio_duration + config.AUDIO_TRAILING_DELAY_SECONDS
+                await asyncio.sleep(wait)
+                total_dialogue_seconds += wait
+        return total_dialogue_seconds
+
     async def _run(self) -> None:
         try:
             while not self.tournament.is_over:
@@ -270,7 +324,7 @@ class GameSession:
                         self.tournament.apply_action(actor_id, fallback, None)
                         result = ActionResult(action=fallback, amount=None, message=None)
 
-                    if not is_talk_eligible(result.action, view):
+                    if not is_talk_eligible(result.action, view, result.amount):
                         result.message = None
 
                     audio = (
@@ -320,6 +374,11 @@ class GameSession:
 
                 net_results = self.tournament.finish_hand()
                 winners = [pid for pid, net in net_results.items() if net > 0]
+                board_len_at_end = len(hand.board_cards)
+
+                reveal_dialogue_seconds = await self._broadcast_win_reactions(
+                    hand, winners, net_results, board_len_at_end
+                )
 
                 # only a real showdown has a "type of hand" worth announcing --
                 # a fold-out win never reveals cards, so there's nothing to
@@ -347,8 +406,14 @@ class GameSession:
                 )
 
                 # give the table a beat to see who won (and their hand, if it
-                # went to showdown) before the next hand is dealt
-                await asyncio.sleep(config.HAND_RESULT_DISPLAY_SECONDS)
+                # went to showdown) before the next hand is dealt -- but if the
+                # reveal dialogue itself already ran longer than that beat,
+                # don't stack the full delay on top of it: just add one more
+                # second once the dialogue's done instead
+                if reveal_dialogue_seconds > config.HAND_RESULT_DISPLAY_SECONDS:
+                    await asyncio.sleep(1.0)
+                else:
+                    await asyncio.sleep(config.HAND_RESULT_DISPLAY_SECONDS - reveal_dialogue_seconds)
 
             await self.broadcast(
                 {
