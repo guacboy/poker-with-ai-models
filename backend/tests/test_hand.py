@@ -171,6 +171,64 @@ def test_winning_hand_cards_excludes_kickers_unrelated_to_the_pair():
     assert set(hand.winning_hand_cards("p0")) == {"As", "Ah"}
 
 
+def _hand_via_apply(hole0: str, hole1: str, flop: str, turn: str, river: str, *, river_aggressor: int) -> Hand:
+    """Builds a 2-player hand by driving it through Hand's own apply_fold/
+    apply_check_or_call/apply_bet_or_raise_to (not raw pokerkit calls like
+    _showdown_state above), so this exercises Hand's actual showdown-reveal
+    behavior end to end. `river_aggressor` (0 or 1) is the seat that bets the
+    river -- pokerkit's own default automation only shows a showdown
+    participant's cards if they still have a chance to win, so putting the
+    winner in that seat and the loser in the other reproduces exactly the
+    scenario where pokerkit would otherwise muck the loser's hand silently,
+    without ever revealing it."""
+    automations = (
+        Automation.ANTE_POSTING,
+        Automation.BET_COLLECTION,
+        Automation.BLIND_OR_STRADDLE_POSTING,
+        Automation.HAND_KILLING,
+        Automation.CHIPS_PUSHING,
+        Automation.CHIPS_PULLING,
+    )
+    state = NoLimitTexasHoldem.create_state(automations, True, 0, (50, 100), 100, (10000, 10000), 2)
+    state.deal_hole(hole0)
+    state.deal_hole(hole1)
+    hand = Hand(state, ["p0", "p1"], {"p0": 10000, "p1": 10000})
+    hand.apply_check_or_call()  # SB completes
+    hand.apply_check_or_call()  # BB checks
+    for board, burn in zip((flop, turn, river), _BURN_CARDS):
+        state.burn_card(burn)
+        state.deal_board(board)
+        if board == river:
+            while state.actor_index is not None:
+                if state.actor_index == river_aggressor:
+                    hand.apply_bet_or_raise_to(500)
+                else:
+                    hand.apply_check_or_call()
+        else:
+            hand.apply_check_or_call()
+            hand.apply_check_or_call()
+    assert not state.status, "hand should be fully over"
+    return hand
+
+
+def test_showdown_loser_hand_is_revealed_even_when_pokerkit_would_muck_it_silently():
+    """Regression test: pokerkit's own show-or-muck automation only reveals a
+    showdown participant's cards if they still have a chance to win the pot
+    (or it's an all-in) -- an outright loser who isn't first in showdown
+    order (i.e. not the hand's last aggressor) mucks WITHOUT ever showing.
+    Here p1 (river aggressor, big pair) wins and shows first; p0 (caller,
+    garbage hand) has no chance to win and would normally muck silently.
+    Hand._force_full_showdown_reveal exists specifically so this doesn't
+    happen -- both revealed_hole_cards and winning_hand_label/
+    winning_hand_cards must still work for p0 despite the loss."""
+    hand = _hand_via_apply("2c7d", "AsAh", "Kd9s4h", "Qc", "Jh", river_aggressor=1)
+
+    assert hand.revealed_hole_cards() == {"p0": ["2c", "7d"], "p1": ["As", "Ah"]}
+    assert hand.winning_hand_label("p0") == "High card"
+    assert hand.winning_hand_cards("p0") == ["Kd"]
+    assert hand.net_results()["p0"] < 0
+
+
 def test_winning_hand_cards_is_none_for_a_player_no_longer_in_contention():
     t = make_tournament()
     hand = t.start_hand()

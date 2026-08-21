@@ -7,6 +7,10 @@ trash talk come back from a single call (per the "bundled" decision), so
 providers must request both in one structured-output call.
 """
 
+# TODO(feat): whenever a bot talks, have a 50% chance for another bot to respond (only one bot can respond, not multiple) regardless of current position (limit only to one response to avoid using too much api calls; make sure if back n forth banter occurs at the reveal stage, the new hand does not start until ALL dialogue is finished). have checks for whenever dialogue is happening at any time, any other possible dialogue is in queue until the dialogue that occurred first is finished (this will avoid any overlapping audio) 
+# TODO(bug): when cards aren't shown to the table, the AI would accidentally reveal their hand in their dialogue (e.g., they would bet and mention that their pocket aces would beat this round) - this gives away information on what they have
+# TODO(bug): only claude is doing the dialogue, no one else.
+
 from __future__ import annotations
 
 import random
@@ -135,14 +139,9 @@ def facing_a_raise(view: dict) -> bool:
 
 # Chance an otherwise-quiet action (a free check, a preflop/flop blind-limp
 # call, or a fold that never put in anything beyond a forced blind) still
-# comes with a talk line anyway. Rises street by street so the table gets
-# chattier as the hand escalates -- preflop stays almost silent, river is a
-# coinflip.
-AMBIENT_TALK_CHANCE = {PREFLOP: 0.05, FLOP: 0.15, TURN: 0.30, RIVER: 0.50}
-# Same, but bumped further on turn/river specifically when a genuinely risky,
-# all-in moment is part of the picture (see `_is_risky_moment`) -- higher
-# stakes make even an otherwise-quiet check worth reacting to.
-AMBIENT_TALK_CHANCE_RISKY = {TURN: 0.55, RIVER: 0.75}
+# comes with a talk line anyway. Flat regardless of street -- every turn gets
+# a real shot at a line, not just the loud ones.
+AMBIENT_TALK_CHANCE = 0.5
 
 # Chance for an inherently "meaningful" action -- raising/shoving, a real
 # fold (giving something up), or calling an actual bet/raise. High but not
@@ -173,9 +172,11 @@ def talk_chance(action: str, view: dict, amount: int | None = None) -> float:
 
     Two tiers: a "meaningful" action (raising/shoving, a real fold, calling
     an actual bet) is highly likely to talk but not guaranteed
-    (`MEANINGFUL_TALK_CHANCE`); anything otherwise silent gets a small,
-    street-scaled chance instead (`AMBIENT_TALK_CHANCE`). Both tiers get
-    bumped further on turn/river when a risky, all-in moment is in play.
+    (`MEANINGFUL_TALK_CHANCE`), bumped further on turn/river when a risky,
+    all-in moment is in play. Anything otherwise silent (a free check, a
+    blind-limp call, a fold that never put in anything beyond a forced blind)
+    gets a flat, unscaled chance instead (`AMBIENT_TALK_CHANCE`) -- every turn
+    gets a real shot at a line, not just the loud ones.
     """
     street = view["street_index"]
     risky = street in (TURN, RIVER) and _is_risky_moment(action, amount, view)
@@ -183,18 +184,15 @@ def talk_chance(action: str, view: dict, amount: int | None = None) -> float:
     def meaningful() -> float:
         return MEANINGFUL_TALK_CHANCE_RISKY if risky else MEANINGFUL_TALK_CHANCE
 
-    def ambient() -> float:
-        return AMBIENT_TALK_CHANCE_RISKY[street] if risky else AMBIENT_TALK_CHANCE[street]
-
     if action == "fold":
         if street in (PREFLOP, FLOP):
             own_seat = next(s for s in view["seats"] if s["player_id"] == view["your_player_id"])
-            return meaningful() if own_seat["voluntarily_invested"] else ambient()
+            return meaningful() if own_seat["voluntarily_invested"] else AMBIENT_TALK_CHANCE
         return meaningful()  # turn/river folds always give something real up
     if action == "bet_or_raise_to":
         return meaningful()
     if action == "check_or_call":
-        return meaningful() if facing_a_raise(view) else ambient()
+        return meaningful() if facing_a_raise(view) else AMBIENT_TALK_CHANCE
     return 0.0
 
 

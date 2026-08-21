@@ -4,7 +4,6 @@ from unittest.mock import patch
 
 from app.ai.base import (
     AMBIENT_TALK_CHANCE,
-    AMBIENT_TALK_CHANCE_RISKY,
     MEANINGFUL_TALK_CHANCE,
     MEANINGFUL_TALK_CHANCE_RISKY,
     FLOP,
@@ -53,40 +52,34 @@ def all_in_opponent(player_id: str = "villain") -> dict:
 # -- talk_chance: ambient tier (previously always-silent actions) ------------
 
 
-def test_preflop_fold_with_no_prior_investment_uses_ambient_preflop_chance() -> None:
+def test_preflop_fold_with_no_prior_investment_uses_ambient_chance() -> None:
     # e.g. UTG folding to an unraised big blind, or to someone else's raise,
     # having never put in anything beyond (at most) a forced blind themselves
     view = make_view(street_index=PREFLOP, call_amount=100, own_bet=0, voluntarily_invested=False)
-    assert talk_chance("fold", view) == AMBIENT_TALK_CHANCE[PREFLOP]
+    assert talk_chance("fold", view) == AMBIENT_TALK_CHANCE
 
 
-def test_flop_fold_with_no_prior_investment_uses_ambient_flop_chance() -> None:
+def test_flop_fold_with_no_prior_investment_uses_ambient_chance() -> None:
     view = make_view(street_index=FLOP, call_amount=50, own_bet=0, voluntarily_invested=False)
-    assert talk_chance("fold", view) == AMBIENT_TALK_CHANCE[FLOP]
+    assert talk_chance("fold", view) == AMBIENT_TALK_CHANCE
 
 
-def test_free_check_uses_ambient_chance_scaled_by_street() -> None:
+def test_free_check_uses_flat_ambient_chance_on_every_street() -> None:
     for street in (PREFLOP, FLOP, TURN, RIVER):
         view = make_view(street_index=street, call_amount=0, own_bet=0)
-        assert talk_chance("check_or_call", view) == AMBIENT_TALK_CHANCE[street]
+        assert talk_chance("check_or_call", view) == AMBIENT_TALK_CHANCE
 
 
-def test_ambient_chance_increases_monotonically_by_street() -> None:
-    values = [AMBIENT_TALK_CHANCE[s] for s in (PREFLOP, FLOP, TURN, RIVER)]
-    assert values == sorted(values)
-    assert values[0] < values[-1]
-
-
-def test_preflop_limp_into_unraised_big_blind_uses_ambient_preflop_chance() -> None:
+def test_preflop_limp_into_unraised_big_blind_uses_ambient_chance() -> None:
     # UTG facing just the posted big blind, nobody has raised
     view = make_view(street_index=PREFLOP, call_amount=100, own_bet=0, big_blind=100)
-    assert talk_chance("check_or_call", view) == AMBIENT_TALK_CHANCE[PREFLOP]
+    assert talk_chance("check_or_call", view) == AMBIENT_TALK_CHANCE
 
 
-def test_small_blind_completing_to_unraised_big_blind_uses_ambient_preflop_chance() -> None:
+def test_small_blind_completing_to_unraised_big_blind_uses_ambient_chance() -> None:
     # SB has already posted 50, needs 50 more to match the (unraised) 100 BB
     view = make_view(street_index=PREFLOP, call_amount=50, own_bet=50, big_blind=100)
-    assert talk_chance("check_or_call", view) == AMBIENT_TALK_CHANCE[PREFLOP]
+    assert talk_chance("check_or_call", view) == AMBIENT_TALK_CHANCE
 
 
 # -- talk_chance: meaningful tier (previously always-eligible actions) -------
@@ -155,11 +148,11 @@ def test_reacting_to_an_opponents_all_in_on_river_boosts_a_fold_to_certain() -> 
     assert talk_chance("fold", view) == MEANINGFUL_TALK_CHANCE_RISKY
 
 
-def test_reacting_to_an_opponents_all_in_on_river_boosts_a_free_check_ambient_chance() -> None:
-    # edge case (e.g. a side pot already settled elsewhere), but the boost
-    # should still apply to an otherwise-ambient action
+def test_reacting_to_an_opponents_all_in_on_river_does_not_boost_a_free_check() -> None:
+    # edge case (e.g. a side pot already settled elsewhere) -- the risky boost
+    # only applies to the meaningful tier, ambient stays flat regardless
     view = make_view(street_index=RIVER, call_amount=0, own_bet=0, other_seats=[all_in_opponent()])
-    assert talk_chance("check_or_call", view) == AMBIENT_TALK_CHANCE_RISKY[RIVER]
+    assert talk_chance("check_or_call", view) == AMBIENT_TALK_CHANCE
 
 
 def test_a_folded_opponents_empty_stack_does_not_count_as_an_all_in() -> None:
@@ -178,14 +171,14 @@ def test_risky_boost_does_not_apply_preflop_or_flop() -> None:
 
 
 def test_is_talk_eligible_rolls_below_chance_as_eligible() -> None:
-    view = make_view(street_index=PREFLOP, call_amount=0, own_bet=0)  # ambient 5%
-    with patch("app.ai.base.random.random", return_value=0.04):
+    view = make_view(street_index=PREFLOP, call_amount=0, own_bet=0)  # ambient 50%
+    with patch("app.ai.base.random.random", return_value=0.49):
         assert is_talk_eligible("check_or_call", view) is True
 
 
 def test_is_talk_eligible_rolls_above_chance_as_not_eligible() -> None:
-    view = make_view(street_index=PREFLOP, call_amount=0, own_bet=0)  # ambient 5%
-    with patch("app.ai.base.random.random", return_value=0.06):
+    view = make_view(street_index=PREFLOP, call_amount=0, own_bet=0)  # ambient 50%
+    with patch("app.ai.base.random.random", return_value=0.51):
         assert is_talk_eligible("check_or_call", view) is False
 
 

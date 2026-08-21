@@ -14,6 +14,14 @@ from pokerkit import Automation, Card, NoLimitTexasHoldem, State
 # Every pokerkit-managed step (dealing, blind posting, showdown, payouts) is
 # automated. The only things we drive manually are the three player actions:
 # fold / check-or-call / bet-or-raise-to.
+# HOLE_CARDS_SHOWING_OR_MUCKING is deliberately excluded: pokerkit's own
+# automatic version only shows a showdown participant's cards if they still
+# have a chance to win the pot, so an outright loser (in a non-all-in pot who
+# isn't first in showdown order) mucks WITHOUT ever showing -- leaving
+# revealed_hole_cards blind to their hand entirely. Hand._force_full_showdown_reveal
+# drives this manually instead, forcing every remaining showdown participant to
+# show regardless of whether they could still win, so a real showdown is always
+# fully visible.
 ALL_AUTOMATIONS = (
     Automation.ANTE_POSTING,
     Automation.BET_COLLECTION,
@@ -21,7 +29,6 @@ ALL_AUTOMATIONS = (
     Automation.CARD_BURNING,
     Automation.HOLE_DEALING,
     Automation.BOARD_DEALING,
-    Automation.HOLE_CARDS_SHOWING_OR_MUCKING,
     Automation.HAND_KILLING,
     Automation.CHIPS_PUSHING,
     Automation.CHIPS_PULLING,
@@ -180,12 +187,25 @@ class Hand:
         folding_player_id = self.current_actor_id
         self.state.fold()
         self._explicitly_folded_ids.add(folding_player_id)
+        self._force_full_showdown_reveal()
 
     def apply_check_or_call(self) -> None:
         self.state.check_or_call()
+        self._force_full_showdown_reveal()
 
     def apply_bet_or_raise_to(self, amount: int) -> None:
         self.state.complete_bet_or_raise_to(amount)
+        self._force_full_showdown_reveal()
+
+    def _force_full_showdown_reveal(self) -> None:
+        """A no-op unless this action just closed betting on a real showdown
+        (see ALL_AUTOMATIONS above for why HOLE_CARDS_SHOWING_OR_MUCKING isn't
+        automated) -- otherwise can_show_or_muck_hole_cards() is False and the
+        loop never runs. Forces every remaining showdown participant to show,
+        win or lose, so revealed_hole_cards/winning_hand_label never go blind
+        for a real loss the way pokerkit's own default automation would."""
+        while self.state.can_show_or_muck_hole_cards():
+            self.state.show_or_muck_hole_cards(True)
 
     def revealed_hole_cards(self) -> dict[str, list[str]]:
         """Hole cards shown at showdown this hand, keyed by player id. Folded/mucked
@@ -201,13 +221,34 @@ class Hand:
             revealed[player_id] = [_card_str(c) for c in cards]
         return revealed
 
+    def _evaluate_hand(self, player_id: str):
+        """pokerkit's own get_hand() goes blind (returns None) not just for a
+        real fold, but also for a showdown LOSER once HAND_KILLING clears
+        their hole cards from live state -- it does this even after
+        _force_full_showdown_reveal made them show, since "in contention" and
+        "shown" are tracked separately. Falls back to evaluating their
+        revealed cards directly (independent of pokerkit's live contention
+        bookkeeping) so a shown loss still resolves to a real hand instead of
+        None."""
+        idx = self.seat_player_ids.index(player_id)
+        hand = self.state.get_hand(idx, 0, 0)
+        if hand is not None:
+            return hand
+        revealed = self.revealed_hole_cards().get(player_id)
+        if not revealed or not self.board_cards:
+            return None
+        try:
+            return self.state.hand_types[0].from_game("".join(revealed), "".join(self.board_cards))
+        except (KeyError, ValueError):
+            return None
+
     def winning_hand_label(self, player_id: str) -> str | None:
         """The pokerkit hand-category label (e.g. "Straight flush", "Two
         pair") for `player_id`'s best 5-card hand this hand, using their hole
         cards plus the current board. None if it can't be evaluated (not
-        enough board cards yet, or they're not still in contention)."""
-        idx = self.seat_player_ids.index(player_id)
-        hand = self.state.get_hand(idx, 0, 0)
+        enough board cards yet, or they never showed at showdown -- e.g. a
+        real fold)."""
+        hand = self._evaluate_hand(player_id)
         return hand.entry.label.value if hand is not None else None
 
     def winning_hand_cards(self, player_id: str) -> list[str] | None:
@@ -218,8 +259,7 @@ class Hand:
         even though the full 5-card comparison hand also pulled in 3 kicker
         cards (see _defining_cards). None under the same conditions as
         winning_hand_label."""
-        idx = self.seat_player_ids.index(player_id)
-        hand = self.state.get_hand(idx, 0, 0)
+        hand = self._evaluate_hand(player_id)
         if hand is None:
             return None
         return _defining_cards([_card_str(c) for c in hand.cards], hand.entry.label.value)
