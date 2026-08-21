@@ -502,10 +502,12 @@ async def test_long_reveal_dialogue_only_adds_one_second_past_display_delay(
         await real_sleep(0.005)
         if session.pending_human_action is not None and not session.pending_human_action.done():
             legal = session.tournament.current_hand.legal_actions()
-            if legal.can_bet_or_raise:
-                session.submit_human_action("bet_or_raise_to", legal.max_bet_to)
-            else:
-                session.submit_human_action("check_or_call", None)
+            # fold whenever possible -- keeps the human out of the all-in
+            # showdown entirely, so the winner is guaranteed to be one of the
+            # AlwaysShoveAllInPlayer AI seats and this test isn't flaky on
+            # whether the human happens to hold the best hand
+            action = "fold" if legal.can_fold else "check_or_call"
+            session.submit_human_action(action, None)
         if any(e["type"] == "hand_result" for e in ws.events):
             break
 
