@@ -312,9 +312,11 @@ async def test_fold_out_hand_result_reports_winner_hides_cards_and_waits_for_dis
     """A hand everyone folds out of (a walk) should: name exactly one winner
     in the hand_result event, never reveal that winner's (or anyone else's)
     hole cards since there was no showdown, and hold the table on the result
-    for HAND_RESULT_DISPLAY_SECONDS before the loop would deal the next hand."""
+    for HAND_RESULT_DISPLAY_SECONDS_NO_REVEAL (the shorter, no-cards-to-look-at
+    delay -- there's no winning_hand_label here) before dealing the next hand."""
     monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
-    monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.3)
+    monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 999)  # would fail the assertion below if used by mistake
+    monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS_NO_REVEAL", 0.3)
 
     requested_sleeps: list[float] = []
     real_sleep = asyncio.sleep
@@ -368,7 +370,7 @@ async def test_fold_out_hand_result_reports_winner_hides_cards_and_waits_for_dis
     assert winner_seat["hole_cards"] is None
 
     assert any(delay == pytest.approx(0.3) for delay in requested_sleeps), (
-        f"expected a sleep call for the hand-result display delay, got {requested_sleeps}"
+        f"expected a sleep call for the no-reveal hand-result display delay, got {requested_sleeps}"
     )
 
     # a walk never reaches showdown -- there's no hand to name a category for

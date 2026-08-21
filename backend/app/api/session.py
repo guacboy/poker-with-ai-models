@@ -478,11 +478,18 @@ class GameSession:
                 # went to showdown) before the next hand is dealt -- but if the
                 # reveal dialogue itself already ran longer than that beat,
                 # don't stack the full delay on top of it: just add one more
-                # second once the dialogue's done instead
-                if reveal_dialogue_seconds > config.HAND_RESULT_DISPLAY_SECONDS:
+                # second once the dialogue's done instead. A fold-out win (no
+                # winning_hand_label) has less to actually look at, so it gets
+                # the shorter display window.
+                display_seconds = (
+                    config.HAND_RESULT_DISPLAY_SECONDS_NO_REVEAL
+                    if winning_hand_label is None
+                    else config.HAND_RESULT_DISPLAY_SECONDS
+                )
+                if reveal_dialogue_seconds > display_seconds:
                     await asyncio.sleep(1.0)
                 else:
-                    await asyncio.sleep(config.HAND_RESULT_DISPLAY_SECONDS - reveal_dialogue_seconds)
+                    await asyncio.sleep(display_seconds - reveal_dialogue_seconds)
 
             await self.broadcast(
                 {
