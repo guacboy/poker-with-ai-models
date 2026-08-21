@@ -61,6 +61,7 @@ function StartOverlay({
             bigBlind={PLACEHOLDER_BIG_BLIND}
             winningHandLabel={null}
             isChoppedPot={false}
+            winningBoardCards={[]}
           />
           <ActionControls
             legalActions={null}
@@ -207,6 +208,7 @@ function GameScreen({
           bigBlind={publicState.big_blind}
           winningHandLabel={state.winningHandLabel}
           isChoppedPot={(state.handResultWinners?.length ?? 0) > 1}
+          winningBoardCards={state.winningBoardCards}
         />
 
         <ActionControls

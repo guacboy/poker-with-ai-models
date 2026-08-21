@@ -32,6 +32,34 @@ def _card_str(card: Card) -> str:
     return repr(card)  # pokerkit's __repr__ is the short "Js"/"Th" form; __str__ is a long description
 
 
+_RANK_ORDER = "23456789TJQKA"
+
+# categories where the whole 5-card hand IS the pattern (a straight/flush is
+# already exactly 5 specific cards) -- no kickers to trim out
+_NO_KICKER_LABELS = {"Straight", "Flush", "Full house", "Straight flush"}
+# how many cards of a matching rank the category actually needs -- the rest
+# of the 5-card hand is just kickers pulled in to fill out the comparison
+_MATCH_SIZE_BY_LABEL = {"Four of a kind": 4, "Three of a kind": 3, "Two pair": 2, "One pair": 2}
+
+
+def _defining_cards(cards: list[str], label: str) -> list[str]:
+    """Narrows pokerkit's full 5-card best hand down to just the cards that
+    actually make it that category -- e.g. only the 2 cards forming a pair,
+    not the 3 unrelated kicker cards also included to complete the 5-card
+    comparison. Without this, a board card that's merely the best available
+    kicker (and had nothing to do with the pair itself) would get highlighted
+    right alongside the card that actually paired up."""
+    if label in _NO_KICKER_LABELS:
+        return cards
+    match_size = _MATCH_SIZE_BY_LABEL.get(label)
+    if match_size is None:  # "High card" -- no pattern at all, just the top card
+        return [max(cards, key=lambda c: _RANK_ORDER.index(c[0]))]
+    counts: dict[str, int] = {}
+    for card in cards:
+        counts[card[0]] = counts.get(card[0], 0) + 1
+    return [card for card in cards if counts[card[0]] == match_size]
+
+
 @dataclass
 class LegalActions:
     can_fold: bool
@@ -181,6 +209,20 @@ class Hand:
         idx = self.seat_player_ids.index(player_id)
         hand = self.state.get_hand(idx, 0, 0)
         return hand.entry.label.value if hand is not None else None
+
+    def winning_hand_cards(self, player_id: str) -> list[str] | None:
+        """The cards (a mix of hole cards and/or board cards) that actually
+        make `player_id`'s best hand the category it is this hand -- e.g.
+        `["As", "2s", "3s", "4s", "5s"]` for a wheel straight flush (all 5
+        cards are the pattern), but only `["As", "Ah"]` for one pair of aces
+        even though the full 5-card comparison hand also pulled in 3 kicker
+        cards (see _defining_cards). None under the same conditions as
+        winning_hand_label."""
+        idx = self.seat_player_ids.index(player_id)
+        hand = self.state.get_hand(idx, 0, 0)
+        if hand is None:
+            return None
+        return _defining_cards([_card_str(c) for c in hand.cards], hand.entry.label.value)
 
     def final_stacks(self) -> dict[str, int]:
         return dict(zip(self.seat_player_ids, self.state.stacks))

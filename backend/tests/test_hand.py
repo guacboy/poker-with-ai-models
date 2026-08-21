@@ -10,6 +10,7 @@ from __future__ import annotations
 from pokerkit import Automation, NoLimitTexasHoldem
 
 from app import rules
+from app.engine.hand import Hand
 from app.engine.tournament import Tournament
 
 
@@ -82,38 +83,101 @@ def test_winning_hand_label_is_a_real_category_at_showdown():
     assert label in valid_labels
 
 
-def test_winning_hand_label_reports_high_card_the_same_as_any_other_category():
-    """"High card" is a real pokerkit label like any other -- not a special
-    case that reads as "no hand"/falsy anywhere in the label pipeline. Deals
-    a fully controlled, unpaired, unconnected two-player board (bypassing
-    Hand.start, which can't force exact cards) to force an actual high-card
-    showdown and confirm the label comes back as the literal string, the same
-    way every other category already does in
-    test_winning_hand_label_is_a_real_category_at_showdown."""
+# Fixed, deterministic burn cards for _showdown_state below -- picked to
+# never collide with any hole/board card any test actually deals. Automation
+# would otherwise burn a RANDOM card from the deck before each street, which
+# can (and did) coincidentally collide with a card a test deals explicitly
+# later, corrupting the deck and silently knocking a player out of the hand.
+_BURN_CARDS = ("8c", "8d", "8h")
+
+
+def _showdown_state(hole0: str, hole1: str, flop: str, turn: str, river: str):
+    """Deals a fully controlled 2-player hand straight to showdown (bypassing
+    Hand.start, which can't force exact cards), checking through every
+    street. Used to pin down exactly which cards winning_hand_label/
+    winning_hand_cards should report for a specific, known board/hole
+    combination. Card burning is done manually with _BURN_CARDS rather than
+    left to Automation.CARD_BURNING, so nothing here depends on which random
+    card the deck happens to burn (see _BURN_CARDS)."""
     automations = (
         Automation.ANTE_POSTING,
         Automation.BET_COLLECTION,
         Automation.BLIND_OR_STRADDLE_POSTING,
-        Automation.CARD_BURNING,
         Automation.HOLE_CARDS_SHOWING_OR_MUCKING,
         Automation.HAND_KILLING,
         Automation.CHIPS_PUSHING,
         Automation.CHIPS_PULLING,
     )
     state = NoLimitTexasHoldem.create_state(automations, True, 0, (50, 100), 100, (10000, 10000), 2)
-    state.deal_hole("AsKd")
-    state.deal_hole("QcJh")
+    state.deal_hole(hole0)
+    state.deal_hole(hole1)
     state.check_or_call()  # SB completes
     state.check_or_call()  # BB checks
-    for board in ("2h6s9c", "3d", "7c"):  # unpaired, no straight/flush possible
+    for board, burn in zip((flop, turn, river), _BURN_CARDS):
+        state.burn_card(burn)
         state.deal_board(board)
         state.check_or_call()
         state.check_or_call()
-
     assert not state.status, "hand should be fully over"
+    return state
+
+
+def test_winning_hand_label_reports_high_card_the_same_as_any_other_category():
+    """"High card" is a real pokerkit label like any other -- not a special
+    case that reads as "no hand"/falsy anywhere in the label pipeline. Deals
+    a fully controlled, unpaired, unconnected board to force an actual
+    high-card showdown and confirm the label comes back as the literal
+    string, the same way every other category already does in
+    test_winning_hand_label_is_a_real_category_at_showdown."""
+    state = _showdown_state("AsKd", "QcJh", "2h6s9c", "3d", "7c")  # unpaired, no straight/flush possible
     hand = state.get_hand(0, 0, 0)
     assert hand is not None
     assert hand.entry.label.value == "High card"
+
+
+def test_winning_hand_cards_reports_all_5_cards_for_a_no_kicker_category():
+    """Straight/flush/full house/straight flush already use all 5 cards as
+    the pattern itself -- there's no separate kicker to trim out. Deals a
+    controlled wheel straight flush so the exact expected cards are known."""
+    state = _showdown_state("AsKs", "QcJh", "2s3s4s", "5s", "9d")  # As + 2s3s4s5s
+    hand = Hand(state, ["p0", "p1"], {"p0": 10000, "p1": 10000})
+
+    assert hand.winning_hand_label("p0") == "Straight flush"
+    assert set(hand.winning_hand_cards("p0")) == {"As", "2s", "3s", "4s", "5s"}
+
+
+def test_winning_hand_cards_excludes_kickers_unrelated_to_the_pair():
+    """A pair made with one hole card + one board card should only report
+    that one board card -- not also whichever other board cards happened to
+    be the best available kickers to round out the 5-card comparison hand.
+    Board is Ah/9s/7c/Th/2d: p0's pair of aces (As + Ah) picks up Kd/Th/9s as
+    kickers (the top 3 remaining cards) in pokerkit's raw 5-card hand, but
+    only Ah actually made the pair -- Th and 9s never should have lit up.
+    p1's 4d/5d never pairs or connects into anything with this board, so
+    p0's pair wins outright (needed for get_hand to still evaluate p0 at
+    all -- pokerkit stops treating the loser of a showdown as "in
+    contention" once the hand's over, same as a folded player)."""
+    state = _showdown_state("AsKd", "4d5d", "Ah9s7c", "Th", "2d")
+    hand = Hand(state, ["p0", "p1"], {"p0": 10000, "p1": 10000})
+
+    assert hand.winning_hand_label("p0") == "One pair"
+    # sanity check on the premise: pokerkit's raw best-hand really does pull
+    # in Th/9s as kickers, so this is genuinely testing the trim-down and not
+    # a hand where they'd never have been candidates in the first place
+    raw_hand = state.get_hand(0, 0, 0)
+    raw_cards = {repr(c) for c in raw_hand.cards}
+    assert raw_cards == {"As", "Ah", "Kd", "9s", "Th"}, f"unexpected raw best hand: {raw_cards}"
+
+    assert set(hand.winning_hand_cards("p0")) == {"As", "Ah"}
+
+
+def test_winning_hand_cards_is_none_for_a_player_no_longer_in_contention():
+    t = make_tournament()
+    hand = t.start_hand()
+    folded_pid = hand.current_actor_id
+    t.apply_action(folded_pid, "fold")
+
+    assert hand.winning_hand_cards(folded_pid) is None
 
 
 def test_winning_hand_label_is_none_for_a_player_no_longer_in_contention():

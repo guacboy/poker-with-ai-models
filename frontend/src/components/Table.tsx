@@ -22,6 +22,8 @@ interface TableProps {
   // winner (a tie at showdown, or separate main/side pots going to different
   // players) -- combined with winningHandLabel into a single result line
   isChoppedPot: boolean;
+  // board cards that made up the winning hand just shown -- see CommunityCards
+  winningBoardCards: string[];
 }
 
 export function Table({
@@ -32,6 +34,7 @@ export function Table({
   bigBlind,
   winningHandLabel,
   isChoppedPot,
+  winningBoardCards,
 }: TableProps) {
   const resultLabel = isChoppedPot
     ? winningHandLabel
@@ -41,7 +44,7 @@ export function Table({
   return (
     <div className="table-felt">
       <div className="table-center">
-        <CommunityCards cards={boardCards} />
+        <CommunityCards cards={boardCards} winningCards={winningBoardCards} />
         {resultLabel && <div className="winning-hand-label">{resultLabel}</div>}
         <PotDisplay potTotal={potTotal} bigBlind={bigBlind} />
       </div>

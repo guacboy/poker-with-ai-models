@@ -2,9 +2,11 @@ import { PlayingCard } from "./PlayingCard";
 
 interface CommunityCardsProps {
   cards: string[];
+  // board cards that were part of the just-shown winning hand -- see PlayingCard
+  winningCards?: string[];
 }
 
-export function CommunityCards({ cards }: CommunityCardsProps) {
+export function CommunityCards({ cards, winningCards }: CommunityCardsProps) {
   const slots = Array.from({ length: 5 }, (_, i) => cards[i]);
   return (
     <div className="community-cards">
@@ -13,7 +15,12 @@ export function CommunityCards({ cards }: CommunityCardsProps) {
         // moment a slot goes from empty to dealt, which is what replays the
         // reveal animation -- without it React just patches the same node in
         // place and the card would pop in with no transition
-        <PlayingCard key={`${i}-${card ?? "empty"}`} card={card} empty={!card} />
+        <PlayingCard
+          key={`${i}-${card ?? "empty"}`}
+          card={card}
+          empty={!card}
+          highlighted={!!card && (winningCards?.includes(card) ?? false)}
+        />
       ))}
     </div>
   );

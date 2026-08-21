@@ -97,6 +97,10 @@ export type ServerEvent =
       net_results: Record<string, number>;
       winners: string[];
       winning_hand_label: string | null;
+      // the subset of the board cards (e.g. 4 of the 5 for a straight) that
+      // were actually part of the named winning hand -- empty for a fold-out
+      // win or a forfeited hand, same as winning_hand_label being null
+      winning_board_cards: string[];
       bust_events: BustEvent[];
       state: PublicState;
     }

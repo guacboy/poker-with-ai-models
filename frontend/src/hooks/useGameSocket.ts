@@ -39,6 +39,9 @@ interface GameSocketState {
   // when the hand actually reached a showdown; null for a fold-out win or
   // once the next hand starts
   winningHandLabel: string | null;
+  // the board cards that were actually part of that winning hand -- empty
+  // outside the same window winningHandLabel is set for
+  winningBoardCards: string[];
 }
 
 type Action =
@@ -58,6 +61,7 @@ const initialState: GameSocketState = {
   lastHandSnapshot: null,
   handResultWinners: null,
   winningHandLabel: null,
+  winningBoardCards: [],
 };
 
 function formatActionLabel(
@@ -122,6 +126,7 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
             lastHandSnapshot: event.state.hand,
             handResultWinners: null,
             winningHandLabel: null,
+            winningBoardCards: [],
           };
         case "awaiting_action":
           return { ...state, actorView: event.view };
@@ -186,6 +191,7 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
             publicState: event.state,
             handResultWinners: event.winners,
             winningHandLabel: event.winning_hand_label,
+            winningBoardCards: event.winning_board_cards,
           };
         case "win_reaction":
         case "loss_reaction":

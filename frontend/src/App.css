@@ -218,6 +218,14 @@
   font-size: 15px;
   line-height: 1;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+/* board cards that were part of the just-shown winning hand -- nudged
+   upward with a gold glow to call out e.g. the 4 cards making a straight */
+.playing-card--highlighted {
+  transform: translateY(-10px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.45), 0 0 0 2px #ffd166;
 }
 
 .playing-card--red {

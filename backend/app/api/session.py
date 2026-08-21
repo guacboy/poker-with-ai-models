@@ -189,6 +189,7 @@ class GameSession:
                     "net_results": net_results,
                     "winners": [],
                     "winning_hand_label": None,
+                    "winning_board_cards": [],
                     "bust_events": self.tournament.last_bust_events,
                     "state": self._view_public(None),
                 }
@@ -454,14 +455,18 @@ class GameSession:
                 # evaluate (revealed_hole_cards is the same signal the client
                 # already uses to decide whether cards were shown at all)
                 revealed = hand.revealed_hole_cards()
-                winning_hand_label = next(
-                    (
-                        hand.winning_hand_label(pid)
-                        for pid in winners
-                        if pid in revealed
-                    ),
-                    None,
+                labeled_winner_id = next((pid for pid in winners if pid in revealed), None)
+                winning_hand_label = (
+                    hand.winning_hand_label(labeled_winner_id) if labeled_winner_id else None
                 )
+                # which of the board cards specifically were part of that best
+                # 5-card hand (as opposed to hole cards) -- lets the client
+                # visually call out e.g. the 4 board cards that make a
+                # straight, instead of just naming the category in text
+                winning_board_cards: list[str] = []
+                if labeled_winner_id:
+                    best_cards = hand.winning_hand_cards(labeled_winner_id) or []
+                    winning_board_cards = [c for c in hand.board_cards if c in best_cards]
 
                 await self.broadcast(
                     {
@@ -469,6 +474,7 @@ class GameSession:
                         "net_results": net_results,
                         "winners": winners,
                         "winning_hand_label": winning_hand_label,
+                        "winning_board_cards": winning_board_cards,
                         "bust_events": self.tournament.last_bust_events,
                         "state": self._view_public(None),
                     }

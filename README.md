@@ -4,7 +4,7 @@ No-Limit Texas Hold'em against 5 AI opponents (Claude, OpenAI, DeepSeek, Gemini,
 
 ## Tournament format
 
-6-max, 100 BB starting stack, blinds increase every 2 orbits (the button returning to someone who already held it counts as one orbit -- this naturally speeds up as players bust), up to 3 buy-ins per player (human and AI alike, fixed rebuy size), no antes. All of this is tunable in [`backend/app/rules.py`](backend/app/rules.py).
+6-max, 100 BB starting stack, blinds increase every 1 orbit (the button returning to someone who already held it counts as one orbit -- this naturally speeds up as players bust), up to 3 buy-ins per player (human and AI alike, fixed rebuy size), no antes. All of this is tunable in [`backend/app/rules.py`](backend/app/rules.py).
 
 ## AI trash talk
 

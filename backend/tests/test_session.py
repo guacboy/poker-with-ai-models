@@ -381,7 +381,8 @@ async def test_fold_out_hand_result_reports_winner_hides_cards_and_waits_for_dis
 async def test_showdown_hand_result_names_the_winning_hand_category(monkeypatch: pytest.MonkeyPatch) -> None:
     """A hand that actually reaches showdown (forced here by shoving everyone
     all-in preflop) should report a real pokerkit hand-category label for the
-    winning hand, e.g. "Straight flush" -- not just who won."""
+    winning hand, e.g. "Straight flush" -- not just who won -- plus which of
+    the board cards were actually part of that hand."""
     monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
     monkeypatch.setattr(config, "BOARD_REVEAL_DELAY_SECONDS", 0.01)
     monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.01)
@@ -411,7 +412,8 @@ async def test_showdown_hand_result_names_the_winning_hand_category(monkeypatch:
 
     hand_results = [e for e in ws.events if e["type"] == "hand_result"]
     assert hand_results, "expected a hand_result event"
-    label = hand_results[0]["winning_hand_label"]
+    result = hand_results[0]
+    label = result["winning_hand_label"]
 
     valid_labels = {
         "High card",
@@ -425,6 +427,23 @@ async def test_showdown_hand_result_names_the_winning_hand_category(monkeypatch:
         "Straight flush",
     }
     assert label in valid_labels, f"expected a real hand category, got {label!r}"
+
+    # winning_board_cards is trimmed to only the cards that actually make the
+    # hand that category (see Hand._defining_cards -- e.g. just a pair's 2
+    # cards, not unrelated kickers), so it can legitimately be empty (a
+    # pocket pair with no matching board card) -- what matters here is that
+    # every card it does report is a real card that's actually on the board.
+    # result["state"]["hand"] is null post-showdown (the hand's already
+    # over), so the board is only visible via the last pre-result broadcast
+    # that carried one -- either a player_action or, for an early all-in
+    # runout staged street-by-street, a board_dealt event instead.
+    hand_result_index = ws.events.index(result)
+    board_snapshots = [
+        e for e in ws.events[:hand_result_index] if e.get("state", {}).get("hand") is not None
+    ]
+    board_cards = board_snapshots[-1]["state"]["hand"]["board_cards"]
+    winning_board_cards = result["winning_board_cards"]
+    assert set(winning_board_cards) <= set(board_cards)
 
 
 @pytest.mark.asyncio
