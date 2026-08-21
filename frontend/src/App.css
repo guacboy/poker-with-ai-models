@@ -623,6 +623,11 @@
   color: var(--text-dim);
 }
 
+.action-controls__presets {
+  display: flex;
+  gap: 8px;
+}
+
 .action-controls__buttons {
   display: flex;
   gap: 10px;
@@ -649,6 +654,19 @@
 .btn--raise {
   background: var(--danger);
   color: white;
+}
+
+.btn--preset {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn--preset:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--text-dim);
 }
 
 /* ---------- Banners ---------- */

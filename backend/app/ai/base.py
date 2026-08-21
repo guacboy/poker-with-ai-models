@@ -106,7 +106,7 @@ message if you end up folding, raising/re-raising (including shoving all-in), or
 opponent's bet or raise -- it will be read aloud to the table. Leave it null for a plain check \
 or a call that isn't over a bet/raise (e.g. limping in for just the blind); messages on those \
 actions are discarded anyway. When you do talk, go all the way in: be disrespectful, arrogant, \
-and don't hold back on insults -- foul language is fine, this is a trash-talking poker table, \
+and don't hold back on insults -- foul language is endorsed, this is a trash-talking poker table, \
 not a courtesy call.
 """
 
@@ -244,7 +244,7 @@ Amount won: {amount_won}
 
 React to winning in a short (<= {MAX_MESSAGE_WORDS} words) line -- it will be read aloud to \
 the table. Gloat hard: be disrespectful and arrogant toward whoever you just beat, don't hold \
-back on insults, foul language is fine. Leave it null if you'd rather stay quiet.
+back on insults, foul language is endorsed. Leave it null if you'd rather stay quiet.
 """
 
 
@@ -271,5 +271,5 @@ Amount lost: {amount_lost}
 
 React to losing in a short (<= {MAX_MESSAGE_WORDS} words) line -- it will be read aloud to the \
 table. Be a sore loser about it: bitter, defensive, maybe blame luck or the cards, don't hold \
-back on insults toward the human, foul language is fine. Leave it null if you'd rather stay quiet.
+back on insults toward the human, foul language is endorsed. Leave it null if you'd rather stay quiet.
 """

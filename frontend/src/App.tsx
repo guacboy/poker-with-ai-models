@@ -60,8 +60,15 @@ function StartOverlay({
             potTotal={0}
             bigBlind={PLACEHOLDER_BIG_BLIND}
             winningHandLabel={null}
+            isChoppedPot={false}
           />
-          <ActionControls legalActions={null} disabled bigBlind={PLACEHOLDER_BIG_BLIND} onAction={() => {}} />
+          <ActionControls
+            legalActions={null}
+            disabled
+            bigBlind={PLACEHOLDER_BIG_BLIND}
+            potTotal={0}
+            onAction={() => {}}
+          />
         </div>
       </div>
       {!starting && (
@@ -189,12 +196,14 @@ function GameScreen({
           potTotal={displayHand?.pot_total ?? 0}
           bigBlind={publicState.big_blind}
           winningHandLabel={state.winningHandLabel}
+          isChoppedPot={(state.handResultWinners?.length ?? 0) > 1}
         />
 
         <ActionControls
           legalActions={state.actorView?.legal_actions ?? null}
           disabled={!isMyTurn}
           bigBlind={publicState.big_blind}
+          potTotal={state.actorView?.pot_total ?? displayHand?.pot_total ?? 0}
           onAction={(action, amount) => {
             submitAction(action, amount).catch((err) => console.error(err));
           }}

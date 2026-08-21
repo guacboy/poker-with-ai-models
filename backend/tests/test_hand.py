@@ -7,6 +7,8 @@ from a fold-out win. See app.engine.hand.Hand.revealed_hole_cards.
 
 from __future__ import annotations
 
+from pokerkit import Automation, NoLimitTexasHoldem
+
 from app import rules
 from app.engine.tournament import Tournament
 
@@ -78,6 +80,40 @@ def test_winning_hand_label_is_a_real_category_at_showdown():
         "Straight flush",
     }
     assert label in valid_labels
+
+
+def test_winning_hand_label_reports_high_card_the_same_as_any_other_category():
+    """"High card" is a real pokerkit label like any other -- not a special
+    case that reads as "no hand"/falsy anywhere in the label pipeline. Deals
+    a fully controlled, unpaired, unconnected two-player board (bypassing
+    Hand.start, which can't force exact cards) to force an actual high-card
+    showdown and confirm the label comes back as the literal string, the same
+    way every other category already does in
+    test_winning_hand_label_is_a_real_category_at_showdown."""
+    automations = (
+        Automation.ANTE_POSTING,
+        Automation.BET_COLLECTION,
+        Automation.BLIND_OR_STRADDLE_POSTING,
+        Automation.CARD_BURNING,
+        Automation.HOLE_CARDS_SHOWING_OR_MUCKING,
+        Automation.HAND_KILLING,
+        Automation.CHIPS_PUSHING,
+        Automation.CHIPS_PULLING,
+    )
+    state = NoLimitTexasHoldem.create_state(automations, True, 0, (50, 100), 100, (10000, 10000), 2)
+    state.deal_hole("AsKd")
+    state.deal_hole("QcJh")
+    state.check_or_call()  # SB completes
+    state.check_or_call()  # BB checks
+    for board in ("2h6s9c", "3d", "7c"):  # unpaired, no straight/flush possible
+        state.deal_board(board)
+        state.check_or_call()
+        state.check_or_call()
+
+    assert not state.status, "hand should be fully over"
+    hand = state.get_hand(0, 0, 0)
+    assert hand is not None
+    assert hand.entry.label.value == "High card"
 
 
 def test_winning_hand_label_is_none_for_a_player_no_longer_in_contention():

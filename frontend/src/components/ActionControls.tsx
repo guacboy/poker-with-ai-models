@@ -6,10 +6,21 @@ interface ActionControlsProps {
   legalActions: LegalActions | null;
   disabled: boolean;
   bigBlind: number;
+  potTotal: number;
   onAction: (action: ActionName, amount: number | null) => void;
 }
 
-export function ActionControls({ legalActions, disabled, bigBlind, onAction }: ActionControlsProps) {
+// pot-fraction quick presets for the raise-to amount -- computed off the
+// current pot size, not a "true" pot-sized-raise formula (which would also
+// factor in the call amount); simple multiples of the displayed pot are what
+// was asked for and are what a player glancing at the pot total expects
+const POT_PRESETS: { label: string; multiplier: number }[] = [
+  { label: "1/2 Pot", multiplier: 0.5 },
+  { label: "Pot", multiplier: 1 },
+  { label: "2x Pot", multiplier: 2 },
+];
+
+export function ActionControls({ legalActions, disabled, bigBlind, potTotal, onAction }: ActionControlsProps) {
   const [raiseTo, setRaiseTo] = useState<number>(legalActions?.min_bet_to ?? 0);
 
   useEffect(() => {
@@ -30,6 +41,11 @@ export function ActionControls({ legalActions, disabled, bigBlind, onAction }: A
     if (min_bet_to == null || max_bet_to == null) return;
     const chips = Math.max(min_bet_to, Math.min(max_bet_to, bbToChips(bb, bigBlind)));
     setRaiseTo(chips);
+  };
+
+  const setRaiseToChips = (chips: number) => {
+    if (min_bet_to == null || max_bet_to == null) return;
+    setRaiseTo(Math.max(min_bet_to, Math.min(max_bet_to, chips)));
   };
 
   return (
@@ -54,6 +70,29 @@ export function ActionControls({ legalActions, disabled, bigBlind, onAction }: A
             onChange={(e) => setRaiseToBB(Number(e.target.value))}
           />
           <span className="action-controls__unit">BB</span>
+        </div>
+      )}
+      {can_bet_or_raise && min_bet_to != null && max_bet_to != null && (
+        <div className="action-controls__presets">
+          {POT_PRESETS.map(({ label, multiplier }) => (
+            <button
+              key={label}
+              type="button"
+              className="btn btn--preset"
+              disabled={disabled}
+              onClick={() => setRaiseToChips(Math.round(potTotal * multiplier))}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="btn btn--preset"
+            disabled={disabled}
+            onClick={() => setRaiseToChips(max_bet_to)}
+          >
+            All In
+          </button>
         </div>
       )}
       <div className="action-controls__buttons">

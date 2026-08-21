@@ -18,6 +18,10 @@ interface TableProps {
   potTotal: number;
   bigBlind: number;
   winningHandLabel: string | null;
+  // true when the just-finished hand's pot was split across more than one
+  // winner (a tie at showdown, or separate main/side pots going to different
+  // players) -- combined with winningHandLabel into a single result line
+  isChoppedPot: boolean;
 }
 
 export function Table({
@@ -27,12 +31,18 @@ export function Table({
   potTotal,
   bigBlind,
   winningHandLabel,
+  isChoppedPot,
 }: TableProps) {
+  const resultLabel = isChoppedPot
+    ? winningHandLabel
+      ? `Split pot -- ${winningHandLabel}`
+      : "Split pot"
+    : winningHandLabel;
   return (
     <div className="table-felt">
       <div className="table-center">
         <CommunityCards cards={boardCards} />
-        {winningHandLabel && <div className="winning-hand-label">{winningHandLabel}</div>}
+        {resultLabel && <div className="winning-hand-label">{resultLabel}</div>}
         <PotDisplay potTotal={potTotal} bigBlind={bigBlind} />
       </div>
       {seats.map((seat, i) => (
