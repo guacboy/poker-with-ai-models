@@ -11,8 +11,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import rules
-
 if TYPE_CHECKING:
     from .hand import Hand
     from .tournament import Tournament

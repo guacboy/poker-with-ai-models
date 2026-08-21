@@ -204,6 +204,15 @@ class GameSession:
         else:
             self.start()
 
+    async def _synthesize_for(self, pid: str, message: str | None) -> tuple[str | None, float | None]:
+        """Synthesizes `message` in `pid`'s voice, tolerating both a null
+        message (nothing to say) and a null synthesis result (TTS model not
+        downloaded yet) -- either way collapses to (None, None)."""
+        if not message:
+            return None, None
+        audio = await synthesize(message, config.VOICE_BY_PLAYER_ID.get(pid, ""))
+        return audio if audio else (None, None)
+
     def _crossed_street_sizes(self, hand, board_before_len: int) -> list[int]:
         """Which cumulative board sizes (flop/turn/river) this action revealed,
         in order. Empty if the board didn't change; a single entry for a normal
@@ -266,8 +275,7 @@ class GameSession:
                 message = None
             if not message:
                 continue
-            audio = await synthesize(message, config.VOICE_BY_PLAYER_ID.get(pid, ""))
-            audio_base64, audio_duration = audio if audio else (None, None)
+            audio_base64, audio_duration = await self._synthesize_for(pid, message)
             await self.broadcast(
                 {
                     "type": "win_reaction",
@@ -327,12 +335,7 @@ class GameSession:
                     if not is_talk_eligible(result.action, view, result.amount):
                         result.message = None
 
-                    audio = (
-                        await synthesize(result.message, config.VOICE_BY_PLAYER_ID.get(actor_id, ""))
-                        if result.message
-                        else None
-                    )
-                    audio_base64, audio_duration = audio if audio else (None, None)
+                    audio_base64, audio_duration = await self._synthesize_for(actor_id, result.message)
 
                     # if this action left nobody to decide anything (e.g.
                     # everyone remaining is all-in), pokerkit deals every
