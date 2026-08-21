@@ -103,7 +103,9 @@ Decide your action. You may only include a short (<= {MAX_MESSAGE_WORDS} words) 
 message if you end up folding, raising/re-raising (including shoving all-in), or calling an \
 opponent's bet or raise -- it will be read aloud to the table. Leave it null for a plain check \
 or a call that isn't over a bet/raise (e.g. limping in for just the blind); messages on those \
-actions are discarded anyway.
+actions are discarded anyway. When you do talk, go all the way in: be disrespectful, arrogant, \
+and don't hold back on insults -- foul language is fine, this is a trash-talking poker table, \
+not a courtesy call.
 """
 
 
@@ -239,5 +241,6 @@ Board: {', '.join(view['board_cards']) if view['board_cards'] else '(preflop)'}
 Amount won: {amount_won}
 
 React to winning in a short (<= {MAX_MESSAGE_WORDS} words) line -- it will be read aloud to \
-the table. Leave it null if you'd rather stay quiet.
+the table. Gloat hard: be disrespectful and arrogant toward whoever you just beat, don't hold \
+back on insults, foul language is fine. Leave it null if you'd rather stay quiet.
 """
