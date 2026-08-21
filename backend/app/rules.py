@@ -9,7 +9,7 @@ values; it never hardcodes numbers itself.
 NUM_SEATS = 6
 
 # Buy-ins
-STARTING_STACK = 10_000  # chips per buy-in; = 100 * STARTING BIG BLIND below
+STARTING_STACK = 5_000  # chips per buy-in; = 100 * STARTING BIG BLIND below
 MAX_BUY_INS = 3  # per player (human and AI alike); busting all of them = eliminated
 REBUY_SCALES_WITH_BLINDS = False  # rebuys are always STARTING_STACK, not current-level 100BB
 

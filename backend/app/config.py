@@ -36,7 +36,7 @@ HUMAN_PLAYER_ID = "human"
 
 # Artificial delay before an AI's action is applied, purely for UX pacing so
 # actions don't feel instant/jarring in the UI.
-AI_THINKING_DELAY_SECONDS = float(os.getenv("AI_THINKING_DELAY_SECONDS", "1.2"))
+AI_THINKING_DELAY_SECONDS = float(os.getenv("AI_THINKING_DELAY_SECONDS", "1.0"))
 
 # After a spoken trash-talk line, how much longer to hold before moving on to
 # the next player's turn, on top of however long the line itself takes to play.

@@ -67,6 +67,7 @@ function StartOverlay({
             disabled
             bigBlind={PLACEHOLDER_BIG_BLIND}
             potTotal={0}
+            liveCallAmount={0}
             onAction={() => {}}
           />
         </div>
@@ -176,6 +177,15 @@ function GameScreen({
   // starts acting, not just whenever the human's own view happens to update
   const isMyTurn = publicState.hand?.current_actor_id === humanPlayerId;
 
+  // best-effort "what would I owe to call, right now" signal for whenever
+  // it's NOT actually the human's turn yet (so there's no real legal_actions
+  // view to go on) -- kept live off the same broadcast state as isMyTurn, so
+  // e.g. an opponent's raise updates it (and hides the pre-selected Check
+  // option) well before it's actually the human's turn
+  const humanHandSeat = displayHand?.seats.find((s) => s.player_id === humanPlayerId);
+  const liveMaxBet = Math.max(0, ...(displayHand?.seats.filter((s) => !s.folded).map((s) => s.bet) ?? [0]));
+  const liveCallAmount = Math.max(0, liveMaxBet - (humanHandSeat?.bet ?? 0));
+
   return (
     <div className="game-screen">
       {isDebug && <DebugWidget tournamentId={tournamentId} />}
@@ -204,6 +214,7 @@ function GameScreen({
           disabled={!isMyTurn}
           bigBlind={publicState.big_blind}
           potTotal={state.actorView?.pot_total ?? displayHand?.pot_total ?? 0}
+          liveCallAmount={liveCallAmount}
           onAction={(action, amount) => {
             submitAction(action, amount).catch((err) => console.error(err));
           }}

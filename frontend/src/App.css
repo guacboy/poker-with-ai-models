@@ -584,12 +584,6 @@
   margin-top: 30px;
 }
 
-.action-controls--waiting {
-  color: var(--text-dim);
-  font-size: 14px;
-  padding-top: 16px;
-}
-
 .action-controls--disabled {
   opacity: 0.45;
 }
@@ -626,6 +620,18 @@
 .action-controls__presets {
   display: flex;
   gap: 8px;
+}
+
+.action-controls__autoplay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-controls__autoplay-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  min-width: 90px;
 }
 
 .action-controls__buttons {
@@ -667,6 +673,17 @@
 .btn--preset:hover:not(:disabled) {
   color: var(--text);
   border-color: var(--text-dim);
+}
+
+.btn--preset-armed {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.btn--preset-armed:hover:not(:disabled) {
+  color: white;
+  border-color: var(--accent);
 }
 
 /* ---------- Banners ---------- */
