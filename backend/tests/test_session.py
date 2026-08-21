@@ -1159,3 +1159,47 @@ async def test_broadcast_loss_reaction_fires_and_returns_pacing_seconds(monkeypa
     assert loss_reactions[0]["player_id"] == AI_ID
     assert loss_reactions[0]["message"] == "Losing with One pair? Rigged."
     assert loss_reactions[0]["audio_base64"] == "fakebase64"
+
+
+class ViewCapturingLossPlayer:
+    """Records the `view` it's asked to react to, so a test can inspect what
+    the sore-loser reaction call actually saw (e.g. whether the human's
+    revealed cards were threaded through) without depending on message text."""
+
+    def __init__(self, player_id: str, display_name: str):
+        self.player_id = player_id
+        self.display_name = display_name
+        self.seen_views: list[dict] = []
+
+    async def decide(self, view: dict) -> ActionResult:
+        return ActionResult(action="fold")
+
+    async def react_to_win(self, view: dict, hand_label: str | None, amount_won: int) -> str | None:
+        return None
+
+    async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
+        self.seen_views.append(view)
+        return "rigged"
+
+
+@pytest.mark.asyncio
+async def test_broadcast_loss_reaction_shares_the_humans_revealed_hand_with_the_bot() -> None:
+    session = GameSession.new("Dylan", debug=True)
+    capturing_player = ViewCapturingLossPlayer(AI_ID, "Claude")
+    session.ai_players[AI_ID] = capturing_player
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+
+    hand = FakeHandForSoreLoser(
+        seat_player_ids=[config.HUMAN_PLAYER_ID, AI_ID],
+        folded_ids=set(),
+        revealed={config.HUMAN_PLAYER_ID: ["Ah", "Kh"], AI_ID: ["2c", "7d"]},
+    )
+    net_results = {config.HUMAN_PLAYER_ID: 500, AI_ID: -500}
+
+    await session._broadcast_loss_reaction(
+        hand, winners=[config.HUMAN_PLAYER_ID], net_results=net_results, board_len_at_end=5
+    )
+
+    assert len(capturing_player.seen_views) == 1
+    assert capturing_player.seen_views[0]["opponent_hole_cards"] == ["Ah", "Kh"]

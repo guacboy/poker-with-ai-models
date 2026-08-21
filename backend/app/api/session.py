@@ -325,6 +325,12 @@ class GameSession:
 
         hand_label = hand.winning_hand_label(ai_pid)
         view = state_mod.view_for_actor(self.tournament, hand, ai_pid)
+        # the human's hand is only knowable here because this is a post-showdown
+        # reaction call, not the regular decide()-time view -- and only when it
+        # was actually revealed (see _sore_loser_target: the human, as the
+        # winner of a 2-way pot, always ends up shown, but this stays defensive)
+        revealed = hand.revealed_hole_cards()
+        view = {**view, "opponent_hole_cards": revealed.get(self.human_player_id)}
         try:
             message = await self.ai_players[ai_pid].react_to_loss(view, hand_label, -net_results[ai_pid])
         except Exception:

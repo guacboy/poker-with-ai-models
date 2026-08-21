@@ -253,13 +253,20 @@ def build_loss_reaction_prompt(view: dict, hand_label: str, amount_lost: int) ->
     when this bot just lost a heads-up hand at showdown to the human on the
     turn or river (see GameSession._broadcast_loss_reaction). Like
     `build_win_reaction_prompt`, this is a separate post-hand call: nothing
-    about losing is knowable until the showdown result is in."""
+    about losing is knowable until the showdown result is in.
+
+    `view['opponent_hole_cards']` (set only by _broadcast_loss_reaction, not
+    part of the regular decide()-time view) is the human's hand if it was
+    actually revealed at this showdown -- lets the bot's sore-loser line call
+    out the specific hand that beat it, not just the fact that it lost."""
+    opponent_cards = view.get("opponent_hole_cards")
+    opponent_line = f"\nThe human's hole cards: {', '.join(opponent_cards)}" if opponent_cards else ""
     return f"""You just lost a heads-up hand of No-Limit Texas Hold'em at showdown to the human \
 player.
 Your losing hand: {hand_label}
 
 Your hole cards: {', '.join(view['your_hole_cards'])}
-Board: {', '.join(view['board_cards']) if view['board_cards'] else '(preflop)'}
+Board: {', '.join(view['board_cards']) if view['board_cards'] else '(preflop)'}{opponent_line}
 Amount lost: {amount_lost}
 
 React to losing in a short (<= {MAX_MESSAGE_WORDS} words) line -- it will be read aloud to the \

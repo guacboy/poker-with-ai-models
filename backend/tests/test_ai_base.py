@@ -11,6 +11,7 @@ from app.ai.base import (
     PREFLOP,
     RIVER,
     TURN,
+    build_loss_reaction_prompt,
     is_talk_eligible,
     talk_chance,
 )
@@ -186,3 +187,23 @@ def test_is_talk_eligible_rolls_above_chance_as_not_eligible() -> None:
     view = make_view(street_index=PREFLOP, call_amount=0, own_bet=0)  # ambient 5%
     with patch("app.ai.base.random.random", return_value=0.06):
         assert is_talk_eligible("check_or_call", view) is False
+
+
+# -- build_loss_reaction_prompt: cites the human's hand when it's known -----
+
+
+def _loss_view(opponent_hole_cards: list[str] | None = None) -> dict:
+    view = {"your_hole_cards": ["2c", "7d"], "board_cards": ["Ah", "Kh", "Qh", "Jh", "Th"]}
+    if opponent_hole_cards is not None:
+        view["opponent_hole_cards"] = opponent_hole_cards
+    return view
+
+
+def test_build_loss_reaction_prompt_cites_the_humans_hand_when_revealed() -> None:
+    prompt = build_loss_reaction_prompt(_loss_view(["Ac", "Kc"]), "One pair", 500)
+    assert "The human's hole cards: Ac, Kc" in prompt
+
+
+def test_build_loss_reaction_prompt_omits_the_humans_hand_when_not_revealed() -> None:
+    prompt = build_loss_reaction_prompt(_loss_view(), "One pair", 500)
+    assert "The human's hole cards" not in prompt
