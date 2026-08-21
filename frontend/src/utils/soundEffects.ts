@@ -41,7 +41,13 @@ export interface SoundEffectResult {
  * the chips going in aren't silent.
  *
  * "check.mp3" plays for a free check_or_call (call_amount of 0 -- no chips
- * actually go in), which otherwise wouldn't make any sound at all. */
+ * actually go in), which otherwise wouldn't make any sound at all.
+ *
+ * hand_result reuses one of the same betting sounds to simulate the pot
+ * actually being pushed to the winner(s) -- same sound whether it's a single
+ * winner or a chopped pot, since either way chips are physically moving. A
+ * forfeited hand (debug "End Round", `winners` empty) stays silent -- nobody
+ * actually won anything to push chips toward. */
 export function soundEffectForEvent(
   event: ServerEvent,
   prev: SoundEffectTrackingState
@@ -95,6 +101,9 @@ export function soundEffectForEvent(
 
       return { sounds, next: { boardLen: newBoardLen, maxAllInStack } };
     }
+
+    case "hand_result":
+      return { sounds: event.winners.length > 0 ? [randomBettingSound()] : [], next: prev };
 
     default:
       return { sounds: [], next: prev };
