@@ -42,29 +42,31 @@ def _play_and_forfeit_hand(t: Tournament) -> None:
     t.forfeit_current_hand()
 
 
-def test_blind_level_advances_every_two_orbits():
+def test_blind_level_advances_every_orbit():
     t = make_tournament()
 
     # button_index starts at 0 and increments by 1/hand regardless of table
     # size, so a repeat isn't detected until the button wraps back around --
     # the very first orbit (starting from an empty seen-set) takes
-    # NUM_SEATS + 1 hands to register; every orbit after that takes exactly
-    # NUM_SEATS hands, since the seen-set is re-seeded with the repeat holder
-    # instead of starting empty. Nobody busts here, so every seat's original
-    # occupant keeps holding the button in turn.
-    hands_for_two_orbits = 2 * rules.NUM_SEATS + 1
-    for _ in range(hands_for_two_orbits - 1):
+    # NUM_SEATS + 1 hands to register. Nobody busts here, so every seat's
+    # original occupant keeps holding the button in turn. At
+    # ORBITS_PER_BLIND_LEVEL == 1, that single completed orbit is itself the
+    # blind-level bump.
+    assert rules.ORBITS_PER_BLIND_LEVEL == 1, "this test assumes one orbit per level"
+    hands_for_one_orbit = rules.NUM_SEATS + 1
+    for _ in range(hands_for_one_orbit - 1):
         _play_and_forfeit_hand(t)
     assert t.blind_level == 0
 
     _play_and_forfeit_hand(t)
-    assert t.hand_count == hands_for_two_orbits
+    assert t.hand_count == hands_for_one_orbit
     assert t.blind_level == 1
     assert t.blinds == rules.BLIND_SCHEDULE[1]
 
 
 def test_orbit_completes_when_button_returns_to_a_repeat_holder():
     t = make_tournament()
+    assert rules.ORBITS_PER_BLIND_LEVEL == 1, "this test assumes one orbit per level"
     assert t.orbits_until_next_level == rules.ORBITS_PER_BLIND_LEVEL
 
     # walk the button around the full table once -- everyone gets a first,
@@ -72,16 +74,22 @@ def test_orbit_completes_when_button_returns_to_a_repeat_holder():
     for _ in range(rules.NUM_SEATS):
         _play_and_forfeit_hand(t)
     assert t.orbits_completed_this_level == 0
-
-    # the next hand's button wraps back to whoever held it first -- orbit done
-    _play_and_forfeit_hand(t)
-    assert t.orbits_completed_this_level == 1
-    assert t.orbits_until_next_level == rules.ORBITS_PER_BLIND_LEVEL - 1
     assert t.blind_level == 0
+
+    # the next hand's button wraps back to whoever held it first -- orbit
+    # done, and since a single orbit is the whole level here, that same hand
+    # both completes the orbit and immediately advances the blind level (the
+    # orbit counter resets back to 0 for the new level, re-seeded with the
+    # repeat holder rather than starting empty)
+    _play_and_forfeit_hand(t)
+    assert t.orbits_completed_this_level == 0
+    assert t.orbits_until_next_level == rules.ORBITS_PER_BLIND_LEVEL
+    assert t.blind_level == 1
 
 
 def test_orbit_length_shrinks_as_players_bust():
     t = make_tournament()
+    assert rules.ORBITS_PER_BLIND_LEVEL == 1, "this test assumes one orbit per level"
     # eliminate everyone except two seats so an orbit completes much faster
     # than a full table would need
     for p in t.players[2:]:
@@ -89,7 +97,13 @@ def test_orbit_length_shrinks_as_players_bust():
 
     for _ in range(rules.NUM_SEATS - 2):
         _play_and_forfeit_hand(t)
-    assert t.orbits_completed_this_level >= 1
+    # with only 2 active seats, an orbit is just 2 hands (once seeded) -- far
+    # fewer than NUM_SEATS - 2 hands, so at least one has already completed.
+    # At ORBITS_PER_BLIND_LEVEL == 1 that immediately resets
+    # orbits_completed_this_level back to 0 and bumps the blind level, so the
+    # blind level (not the orbit counter) is the observable signal here --
+    # same reasoning as test_orbit_completes_when_button_returns_to_a_repeat_holder.
+    assert t.blind_level >= 1
 
 
 def test_rebuy_up_to_max_then_eliminated():
