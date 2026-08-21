@@ -4,6 +4,9 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
+# Dev server logs (e.g. backend/uvicorn_dev.log)
+*.log
+
 # Downloaded TTS model weights (~330MB, fetched by scripts/download_tts_model.py)
 backend/models/
 
