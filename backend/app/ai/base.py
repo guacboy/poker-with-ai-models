@@ -9,7 +9,6 @@ providers must request both in one structured-output call.
 
 # TODO(feat): whenever a bot talks, have a 90% chance for another bot to respond (only one bot can respond, not multiple) regardless of current position (limit only to one response to avoid using too much api calls; make sure if back n forth banter occurs at the reveal stage, the new hand does not start until ALL dialogue is finished). have checks for whenever dialogue is happening at any time, any other possible dialogue is in queue until the dialogue that occurred first is finished (this will avoid any overlapping audio).
 # TODO(feat): combine the MEANINGFUL_TALK_CHANCE and MEANINGFUL_TALK_CHANCE_RISKY together. whenever a high risk/meaningful play is happening, i want the bots to comment on it.
-# TODO(bug): when cards aren't shown to the table, the AI would accidentally reveal their hand in their dialogue (e.g., they would bet and mention that their pocket aces would beat this round) - this gives away information on what they have
 
 from __future__ import annotations
 
@@ -111,7 +110,9 @@ opponent's bet or raise -- it will be read aloud to the table. Leave it null for
 or a call that isn't over a bet/raise (e.g. limping in for just the blind); messages on those \
 actions are discarded anyway. When you do talk, go all the way in: be disrespectful, arrogant, \
 and don't hold back on insults -- foul language is endorsed, this is a trash-talking poker table, \
-not a courtesy call.
+not a courtesy call. Your hand hasn't been shown yet, so never reveal or hint at your actual hole \
+cards or hand strength (no naming specific cards, no "I've got the nuts", no giving away whether \
+you're bluffing) -- keep the talk to generic bravado and insults instead.
 """
 
 
@@ -232,8 +233,14 @@ def build_win_reaction_prompt(view: dict, hand_label: str | None, amount_won: in
     actually won."""
     if hand_label is not None:
         situation = f"You just won a hand of No-Limit Texas Hold'em at showdown.\nYour winning hand: {hand_label}"
+        secrecy_note = ""
     else:
         situation = "You just won a hand of No-Limit Texas Hold'em -- everyone else folded, so your cards were never shown."
+        secrecy_note = (
+            " Your cards were never shown, so never reveal or hint at what you actually had "
+            "(no naming specific cards, no giving away whether you were bluffing) -- gloat about "
+            "them folding instead."
+        )
     return f"""{situation}
 
 Your hole cards: {', '.join(view['your_hole_cards'])}
@@ -242,7 +249,7 @@ Amount won: {amount_won}
 
 React to winning in a short (<= {MAX_MESSAGE_WORDS} words) line -- it will be read aloud to \
 the table. Gloat hard: be disrespectful and arrogant toward whoever you just beat, don't hold \
-back on insults, foul language is endorsed. Leave it null if you'd rather stay quiet.
+back on insults, foul language is endorsed.{secrecy_note} Leave it null if you'd rather stay quiet.
 """
 
 

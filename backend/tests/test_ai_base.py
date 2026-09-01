@@ -11,6 +11,8 @@ from app.ai.base import (
     RIVER,
     TURN,
     build_loss_reaction_prompt,
+    build_prompt,
+    build_win_reaction_prompt,
     is_talk_eligible,
     talk_chance,
 )
@@ -200,3 +202,61 @@ def test_build_loss_reaction_prompt_cites_the_humans_hand_when_revealed() -> Non
 def test_build_loss_reaction_prompt_omits_the_humans_hand_when_not_revealed() -> None:
     prompt = build_loss_reaction_prompt(_loss_view(), "One pair", 500)
     assert "The human's hole cards" not in prompt
+
+
+# -- information leaks: the AI must not blurt out an unshown hand's cards ---
+
+
+def _decide_view() -> dict:
+    return {
+        "your_player_id": "hero",
+        "small_blind": 50,
+        "big_blind": 100,
+        "your_hole_cards": ["Ah", "As"],
+        "board_cards": [],
+        "pot_total": 150,
+        "seats": [
+            {
+                "player_id": "hero",
+                "name": "Hero",
+                "stack": 1000,
+                "bet": 0,
+                "is_button": False,
+                "is_small_blind": False,
+                "is_big_blind": False,
+                "folded": False,
+                "is_to_act": True,
+            }
+        ],
+        "legal_actions": {
+            "can_fold": True,
+            "can_check_or_call": True,
+            "call_amount": 0,
+            "can_bet_or_raise": True,
+            "min_bet_to": 200,
+            "max_bet_to": 1000,
+        },
+    }
+
+
+def test_build_prompt_forbids_revealing_hole_cards_in_talk() -> None:
+    """Regression test: the model was given its own hole cards for context but
+    never told to keep them secret, so a raise's trash talk could blurt out
+    e.g. "pocket aces" mid-hand -- long before any showdown actually reveals
+    that hand to the table."""
+    prompt = build_prompt(_decide_view())
+    assert "never reveal or hint at your actual hole cards" in prompt
+
+
+def test_build_win_reaction_prompt_forbids_leak_on_a_fold_out_win() -> None:
+    """A fold-out win never reveals any cards -- hand_label is None -- so the
+    gloating reaction must not be allowed to name what was actually held."""
+    prompt = build_win_reaction_prompt(_loss_view(), None, 500)
+    assert "never reveal or hint" in prompt
+
+
+def test_build_win_reaction_prompt_has_no_secrecy_note_at_a_real_showdown() -> None:
+    """At a real showdown the hand really was shown, so there's nothing left
+    to protect -- the secrecy note only belongs on the fold-out branch."""
+    prompt = build_win_reaction_prompt(_loss_view(), "One pair", 500)
+    assert "never reveal or hint" not in prompt
