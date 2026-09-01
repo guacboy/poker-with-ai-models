@@ -6,6 +6,7 @@ from app import config
 from app.ai.factory import create_ai_player
 from app.ai.mock_player import MockPlayer
 from app.ai.providers.anthropic_player import AnthropicPlayer
+from app.ai.providers.openai_compatible_player import OpenAICompatiblePlayer
 
 
 def test_uses_real_provider_when_key_is_set(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -22,3 +23,28 @@ def test_falls_back_to_mock_when_key_is_missing(monkeypatch: pytest.MonkeyPatch)
     player = create_ai_player("claude", "Claude")
 
     assert isinstance(player, MockPlayer)
+
+
+def test_openai_seat_uses_max_completion_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression test: newer OpenAI models (e.g. gpt-5.1) reject the legacy
+    `max_tokens` param outright with a 400 -- every real decide()/reaction call
+    was failing until this was wired to `max_completion_tokens` specifically
+    for the openai seat (see OpenAICompatiblePlayer.__init__)."""
+    monkeypatch.setattr(config, "OPENAI_API_KEY", "sk-fake")
+
+    player = create_ai_player("openai", "OpenAI")
+
+    assert isinstance(player, OpenAICompatiblePlayer)
+    assert player._max_tokens_param == "max_completion_tokens"
+
+
+def test_deepseek_seat_uses_legacy_max_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
+    """DeepSeek's OpenAI-compatible endpoint still expects the legacy
+    `max_tokens` name (unlike OpenAI itself) -- must not be switched over
+    alongside the openai seat."""
+    monkeypatch.setattr(config, "DEEPSEEK_API_KEY", "sk-fake")
+
+    player = create_ai_player("deepseek", "DeepSeek")
+
+    assert isinstance(player, OpenAICompatiblePlayer)
+    assert player._max_tokens_param == "max_tokens"

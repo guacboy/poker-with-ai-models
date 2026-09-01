@@ -7,9 +7,9 @@ trash talk come back from a single call (per the "bundled" decision), so
 providers must request both in one structured-output call.
 """
 
-# TODO(feat): whenever a bot talks, have a 50% chance for another bot to respond (only one bot can respond, not multiple) regardless of current position (limit only to one response to avoid using too much api calls; make sure if back n forth banter occurs at the reveal stage, the new hand does not start until ALL dialogue is finished). have checks for whenever dialogue is happening at any time, any other possible dialogue is in queue until the dialogue that occurred first is finished (this will avoid any overlapping audio) 
+# TODO(feat): whenever a bot talks, have a 90% chance for another bot to respond (only one bot can respond, not multiple) regardless of current position (limit only to one response to avoid using too much api calls; make sure if back n forth banter occurs at the reveal stage, the new hand does not start until ALL dialogue is finished). have checks for whenever dialogue is happening at any time, any other possible dialogue is in queue until the dialogue that occurred first is finished (this will avoid any overlapping audio).
+# TODO(feat): combine the MEANINGFUL_TALK_CHANCE and MEANINGFUL_TALK_CHANCE_RISKY together. whenever a high risk/meaningful play is happening, i want the bots to comment on it.
 # TODO(bug): when cards aren't shown to the table, the AI would accidentally reveal their hand in their dialogue (e.g., they would bet and mention that their pocket aces would beat this round) - this gives away information on what they have
-# TODO(bug): only claude is doing the dialogue, no one else.
 
 from __future__ import annotations
 

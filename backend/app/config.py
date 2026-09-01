@@ -20,9 +20,13 @@ XAI_API_KEY = os.getenv("XAI_API_KEY")
 
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.1")
-DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-pro")
-XAI_MODEL = os.getenv("XAI_MODEL", "grok-5")
+# deepseek-v4-pro (the heavier reasoning tier) can spend 80+ seconds and its
+# entire reasoning budget on this prompt shape without ever producing a
+# reply, even at a generous token budget -- deepseek-v4-flash is far more
+# reliable for a bounded per-turn decision and still plenty capable.
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+XAI_MODEL = os.getenv("XAI_MODEL", "grok-4.6")
 
 # (player_id, display_name) for each AI seat, in fixed seat order.
 AI_SEATS: list[tuple[str, str]] = [
@@ -37,6 +41,13 @@ HUMAN_PLAYER_ID = "human"
 # Artificial delay before an AI's action is applied, purely for UX pacing so
 # actions don't feel instant/jarring in the UI.
 AI_THINKING_DELAY_SECONDS = float(os.getenv("AI_THINKING_DELAY_SECONDS", "1.0"))
+
+# Hard ceiling on a single AI provider call (decide/react_to_win/react_to_loss).
+# Without this, a slow or hung provider blocks the entire tournament loop
+# indefinitely -- every other seat and the human both wait on it -- instead of
+# just falling back to a quiet fold/no-reaction the way a normal API error
+# already does (see GameSession._run and the *_reaction methods).
+AI_RESPONSE_TIMEOUT_SECONDS = float(os.getenv("AI_RESPONSE_TIMEOUT_SECONDS", "45.0"))
 
 # After a spoken trash-talk line, how much longer to hold before moving on to
 # the next player's turn, on top of however long the line itself takes to play.

@@ -269,9 +269,13 @@ class GameSession:
             hand_label = hand.winning_hand_label(pid) if pid in revealed else None
             view = state_mod.view_for_actor(self.tournament, hand, pid)
             try:
-                # provider APIs are flaky by nature -- a failed reaction just
-                # means silence, never a crashed tournament loop
-                message = await self.ai_players[pid].react_to_win(view, hand_label, net_results[pid])
+                # provider APIs are flaky by nature -- a failed or hung
+                # reaction just means silence, never a crashed or frozen
+                # tournament loop (see AI_RESPONSE_TIMEOUT_SECONDS)
+                message = await asyncio.wait_for(
+                    self.ai_players[pid].react_to_win(view, hand_label, net_results[pid]),
+                    timeout=config.AI_RESPONSE_TIMEOUT_SECONDS,
+                )
             except Exception:
                 message = None
             if not message:
@@ -333,7 +337,10 @@ class GameSession:
         revealed = hand.revealed_hole_cards()
         view = {**view, "opponent_hole_cards": revealed.get(self.human_player_id)}
         try:
-            message = await self.ai_players[ai_pid].react_to_loss(view, hand_label, -net_results[ai_pid])
+            message = await asyncio.wait_for(
+                self.ai_players[ai_pid].react_to_loss(view, hand_label, -net_results[ai_pid]),
+                timeout=config.AI_RESPONSE_TIMEOUT_SECONDS,
+            )
         except Exception:
             message = None
         if not message:
@@ -379,9 +386,13 @@ class GameSession:
                         else:
                             try:
                                 # provider APIs are flaky by nature (timeouts, rate limits,
-                                # occasional malformed JSON) -- never let one bad call kill
-                                # the whole tournament loop.
-                                result = await self.ai_players[actor_id].decide(view)
+                                # occasional malformed JSON, or just hanging/pathologically
+                                # slow -- see AI_RESPONSE_TIMEOUT_SECONDS) -- never let one
+                                # bad call kill or freeze the whole tournament loop.
+                                result = await asyncio.wait_for(
+                                    self.ai_players[actor_id].decide(view),
+                                    timeout=config.AI_RESPONSE_TIMEOUT_SECONDS,
+                                )
                                 result.amount = clamp_amount(view, result.amount)
                             except Exception:
                                 result = ActionResult(action="fold", amount=None, message=None)
