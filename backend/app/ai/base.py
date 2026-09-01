@@ -9,7 +9,6 @@ providers must request both in one structured-output call.
 
 # TODO(feat): whenever a bot talks, have a 90% chance for another bot to respond (only one bot can respond, not multiple) regardless of current position (limit only to one response to avoid using too much api calls; make sure if back n forth banter occurs at the reveal stage, the new hand does not start until ALL dialogue is finished). have checks for whenever dialogue is happening at any time, any other possible dialogue is in queue until the dialogue that occurred first is finished (this will avoid any overlapping audio).
 # TODO(feat): combine the MEANINGFUL_TALK_CHANCE and MEANINGFUL_TALK_CHANCE_RISKY together. whenever a high risk/meaningful play is happening, i want the bots to comment on it.
-# TODO(bug): winning hand reveal is delayed because i think it's waiting for the model to think of a comment. have the winning hand reveal play while the model is thinking, and have the next round not start until the model finishes its dialogue.
 
 from __future__ import annotations
 

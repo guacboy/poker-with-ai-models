@@ -454,13 +454,6 @@ class GameSession:
                 winners = [pid for pid, net in net_results.items() if net > 0]
                 board_len_at_end = len(hand.board_cards)
 
-                reveal_dialogue_seconds = await self._broadcast_win_reactions(
-                    hand, winners, net_results, board_len_at_end
-                )
-                reveal_dialogue_seconds += await self._broadcast_loss_reaction(
-                    hand, winners, net_results, board_len_at_end
-                )
-
                 # only a real showdown has a "type of hand" worth announcing --
                 # a fold-out win never reveals cards, so there's nothing to
                 # evaluate (revealed_hole_cards is the same signal the client
@@ -479,6 +472,14 @@ class GameSession:
                     best_cards = hand.winning_hand_cards(labeled_winner_id) or []
                     winning_board_cards = [c for c in hand.board_cards if c in best_cards]
 
+                # Broadcast the reveal itself before asking any AI for a
+                # reaction -- a reaction call is a real (sometimes slow) API
+                # round-trip, and the table shouldn't sit frozen on the last
+                # betting action while that's in flight. The client sees who
+                # won immediately; the guaranteed win/loss reaction dialogue
+                # below plays out on top of that already-revealed result, and
+                # the pacing further down still won't deal the next hand until
+                # it's actually finished.
                 await self.broadcast(
                     {
                         "type": "hand_result",
@@ -489,6 +490,13 @@ class GameSession:
                         "bust_events": self.tournament.last_bust_events,
                         "state": self._view_public(None),
                     }
+                )
+
+                reveal_dialogue_seconds = await self._broadcast_win_reactions(
+                    hand, winners, net_results, board_len_at_end
+                )
+                reveal_dialogue_seconds += await self._broadcast_loss_reaction(
+                    hand, winners, net_results, board_len_at_end
                 )
 
                 # give the table a beat to see who won (and their hand, if it
