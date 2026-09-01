@@ -49,6 +49,7 @@ class OpenAICompatiblePlayer:
         model: str,
         base_url: str | None = None,
         max_tokens_param: str = "max_tokens",
+        reasoning_effort: str | None = None,
     ):
         self.player_id = player_id
         self.display_name = display_name
@@ -60,6 +61,19 @@ class OpenAICompatiblePlayer:
         # name. Configurable per instance since this one class serves all of
         # them -- see ai/factory.py for which seat passes which name.
         self._max_tokens_param = max_tokens_param
+        # Reasoning-capable models (OpenAI's gpt-5.x, DeepSeek's, xAI's) spend
+        # hidden "thinking" tokens before ever emitting the visible reply --
+        # for a bounded per-turn poker decision that's pure latency with no
+        # payoff (confirmed live: unset, DeepSeek took 32s/3326 reasoning
+        # tokens for one decide() call; "none" dropped that to ~1s). Left None
+        # for providers/models that don't support the param at all.
+        self._reasoning_effort = reasoning_effort
+
+    def _extra_kwargs(self) -> dict:
+        kwargs = {self._max_tokens_param: MAX_RESPONSE_TOKENS}
+        if self._reasoning_effort is not None:
+            kwargs["reasoning_effort"] = self._reasoning_effort
+        return kwargs
 
     async def decide(self, view: dict) -> ActionResult:
         response = await self._client.chat.completions.create(
@@ -69,7 +83,7 @@ class OpenAICompatiblePlayer:
                 {"role": "user", "content": build_prompt(view)},
             ],
             response_format={"type": "json_object"},
-            **{self._max_tokens_param: MAX_RESPONSE_TOKENS},
+            **self._extra_kwargs(),
         )
         data = json.loads(response.choices[0].message.content)
         return ActionResult(action=data["action"], amount=data.get("amount"), message=data.get("message"))
@@ -82,7 +96,7 @@ class OpenAICompatiblePlayer:
                 {"role": "user", "content": build_win_reaction_prompt(view, hand_label, amount_won)},
             ],
             response_format={"type": "json_object"},
-            **{self._max_tokens_param: MAX_RESPONSE_TOKENS},
+            **self._extra_kwargs(),
         )
         data = json.loads(response.choices[0].message.content)
         return data.get("message")
@@ -95,7 +109,7 @@ class OpenAICompatiblePlayer:
                 {"role": "user", "content": build_loss_reaction_prompt(view, hand_label, amount_lost)},
             ],
             response_format={"type": "json_object"},
-            **{self._max_tokens_param: MAX_RESPONSE_TOKENS},
+            **self._extra_kwargs(),
         )
         data = json.loads(response.choices[0].message.content)
         return data.get("message")

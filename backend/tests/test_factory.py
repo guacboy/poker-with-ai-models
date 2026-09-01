@@ -48,3 +48,23 @@ def test_deepseek_seat_uses_legacy_max_tokens(monkeypatch: pytest.MonkeyPatch) -
 
     assert isinstance(player, OpenAICompatiblePlayer)
     assert player._max_tokens_param == "max_tokens"
+
+
+def test_openai_and_deepseek_seats_disable_reasoning_effort(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression test: left unset, DeepSeek's reasoning burned an entire
+    decide() call on hidden "thinking" tokens (32s, 3326 reasoning tokens)
+    without ever producing a reply -- reasoning_effort="none" dropped that to
+    ~1s. OpenAI's gpt-5.1 shows the same pattern. Both support "none"."""
+    monkeypatch.setattr(config, "OPENAI_API_KEY", "sk-fake")
+    monkeypatch.setattr(config, "DEEPSEEK_API_KEY", "sk-fake")
+
+    assert create_ai_player("openai", "OpenAI")._reasoning_effort == "none"
+    assert create_ai_player("deepseek", "DeepSeek")._reasoning_effort == "none"
+
+
+def test_grok_seat_uses_low_reasoning_effort(monkeypatch: pytest.MonkeyPatch) -> None:
+    """grok-4.6 rejects reasoning_effort="none" outright with a 400 -- "low"
+    is its minimum supported tier."""
+    monkeypatch.setattr(config, "XAI_API_KEY", "sk-fake")
+
+    assert create_ai_player("grok", "Grok")._reasoning_effort == "low"

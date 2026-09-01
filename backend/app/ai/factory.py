@@ -29,15 +29,28 @@ def create_ai_player(player_id: str, display_name: str):
             config.OPENAI_API_KEY,
             config.OPENAI_MODEL,
             max_tokens_param="max_completion_tokens",
+            reasoning_effort="none",
         )
     if player_id == "deepseek" and config.DEEPSEEK_API_KEY:
         return OpenAICompatiblePlayer(
-            player_id, display_name, config.DEEPSEEK_API_KEY, config.DEEPSEEK_MODEL, base_url=DEEPSEEK_BASE_URL
+            player_id,
+            display_name,
+            config.DEEPSEEK_API_KEY,
+            config.DEEPSEEK_MODEL,
+            base_url=DEEPSEEK_BASE_URL,
+            reasoning_effort="none",
         )
     if player_id == "gemini" and config.GEMINI_API_KEY:
         return GeminiPlayer(player_id, display_name, config.GEMINI_API_KEY, config.GEMINI_MODEL)
     if player_id == "grok" and config.XAI_API_KEY:
         return OpenAICompatiblePlayer(
-            player_id, display_name, config.XAI_API_KEY, config.XAI_MODEL, base_url=XAI_BASE_URL
+            player_id,
+            display_name,
+            config.XAI_API_KEY,
+            config.XAI_MODEL,
+            base_url=XAI_BASE_URL,
+            # grok-4.6 rejects reasoning_effort="none" outright (400) -- "low"
+            # is its minimum supported tier
+            reasoning_effort="low",
         )
     return MockPlayer(player_id, display_name)
