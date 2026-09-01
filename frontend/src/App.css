@@ -596,11 +596,6 @@
   opacity: 0.45;
 }
 
-.action-controls__waiting {
-  color: var(--text-dim);
-  font-size: 13px;
-}
-
 .action-controls__raise {
   display: flex;
   align-items: center;
@@ -620,6 +615,11 @@
   padding: 4px 6px;
 }
 
+.action-controls__raise input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .action-controls__unit {
   font-size: 13px;
   color: var(--text-dim);
@@ -630,16 +630,9 @@
   gap: 8px;
 }
 
-.action-controls__autoplay {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .action-controls__autoplay-label {
   font-size: 12px;
   color: var(--text-dim);
-  min-width: 90px;
 }
 
 .action-controls__buttons {
@@ -653,6 +646,14 @@
   padding: 10px 20px;
   font-weight: 700;
   font-size: 14px;
+}
+
+/* An action that isn't legal this decision (e.g. no chips left to raise
+   with) stays in place rather than disappearing -- just greyed out and
+   inert, so the button row doesn't reflow depending on what's available. */
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .btn--fold {
@@ -692,6 +693,27 @@
 .btn--preset-armed:hover:not(:disabled) {
   color: white;
   border-color: var(--accent);
+}
+
+/* Pre-select variants of the real Fold/Call/Raise buttons -- same colors as
+   their "my turn" counterparts (so it's obvious which real action each one
+   will fire), dimmed until armed so an idle pre-select row doesn't read as
+   three fully-lit, clickable-right-now actions. */
+.btn--preselect {
+  opacity: 0.55;
+}
+
+.btn--preselect:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.btn--preselect-armed {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--warn);
+}
+
+.btn--preselect-armed:hover:not(:disabled) {
+  opacity: 1;
 }
 
 /* ---------- Banners ---------- */

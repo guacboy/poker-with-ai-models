@@ -20,6 +20,7 @@ const SEAT_SPECS: { playerId: string; name: string; kind: "human" | "ai" }[] = [
 
 export const PLACEHOLDER_BIG_BLIND = BIG_BLIND;
 export const PLACEHOLDER_SMALL_BLIND = SMALL_BLIND;
+export const PLACEHOLDER_STARTING_STACK = STARTING_STACK;
 
 export const PLACEHOLDER_PLAYERS: PublicPlayer[] = SEAT_SPECS.map((spec) => ({
   player_id: spec.playerId,

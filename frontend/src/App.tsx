@@ -10,6 +10,7 @@ import {
   PLACEHOLDER_PLAYERS,
   PLACEHOLDER_SEATS,
   PLACEHOLDER_SMALL_BLIND,
+  PLACEHOLDER_STARTING_STACK,
 } from "./data/placeholderTable";
 import { useAudioQueue } from "./hooks/useAudioQueue";
 import { createTournament, useGameSocket } from "./hooks/useGameSocket";
@@ -69,6 +70,8 @@ function StartOverlay({
             bigBlind={PLACEHOLDER_BIG_BLIND}
             potTotal={0}
             liveCallAmount={0}
+            liveMinRaiseTo={PLACEHOLDER_BIG_BLIND}
+            liveMaxRaiseTo={PLACEHOLDER_STARTING_STACK}
             onAction={() => {}}
           />
         </div>
@@ -187,6 +190,14 @@ function GameScreen({
   const liveMaxBet = Math.max(0, ...(displayHand?.seats.filter((s) => !s.folded).map((s) => s.bet) ?? [0]));
   const liveCallAmount = Math.max(0, liveMaxBet - (humanHandSeat?.bet ?? 0));
 
+  // same best-effort idea, for the raise-to bounds: a rough "min raise" (the
+  // live highest bet plus one big blind) and "max raise" (the human's own
+  // current bet plus stack, i.e. shoving all in) -- lets the raise slider and
+  // its pre-select show up before the human's first real turn ever arrives
+  const humanStack = seats.find((s) => s.playerId === humanPlayerId)?.stack ?? 0;
+  const liveMaxRaiseTo = (humanHandSeat?.bet ?? 0) + humanStack;
+  const liveMinRaiseTo = Math.min(liveMaxRaiseTo, liveMaxBet + publicState.big_blind);
+
   return (
     <div className="game-screen">
       {isDebug && <DebugWidget tournamentId={tournamentId} />}
@@ -217,6 +228,8 @@ function GameScreen({
           bigBlind={publicState.big_blind}
           potTotal={state.actorView?.pot_total ?? displayHand?.pot_total ?? 0}
           liveCallAmount={liveCallAmount}
+          liveMinRaiseTo={liveMinRaiseTo}
+          liveMaxRaiseTo={liveMaxRaiseTo}
           onAction={(action, amount) => {
             submitAction(action, amount).catch((err) => console.error(err));
           }}
