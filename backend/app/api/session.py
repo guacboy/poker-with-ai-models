@@ -407,7 +407,7 @@ class GameSession:
                         self.tournament.apply_action(actor_id, fallback, None)
                         result = ActionResult(action=fallback, amount=None, message=None)
 
-                    if not is_talk_eligible(result.action, view, result.amount):
+                    if not is_talk_eligible(result.action, view):
                         result.message = None
 
                     audio_base64, audio_duration = await self._synthesize_for(actor_id, result.message)

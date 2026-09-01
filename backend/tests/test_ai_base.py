@@ -5,7 +5,6 @@ from unittest.mock import patch
 from app.ai.base import (
     AMBIENT_TALK_CHANCE,
     MEANINGFUL_TALK_CHANCE,
-    MEANINGFUL_TALK_CHANCE_RISKY,
     FLOP,
     PREFLOP,
     RIVER,
@@ -127,46 +126,32 @@ def test_unknown_action_has_zero_chance() -> None:
     assert talk_chance("some_other_action", view) == 0.0
 
 
-# -- risky-moment boost (turn/river only) ------------------------------------
+# -- meaningful tier: a high-risk/all-in moment is just meaningful too -------
+# (MEANINGFUL_TALK_CHANCE and the old risky-only bump used to be two separate
+# constants; a meaningful play is now always guaranteed a line regardless of
+# whether it's also a big all-in moment, so there's nothing left to boost.)
 
 
-def test_shoving_all_in_on_turn_boosts_meaningful_chance_to_certain() -> None:
+def test_shoving_all_in_on_turn_still_uses_meaningful_chance() -> None:
     view = make_view(street_index=TURN, call_amount=0, own_bet=0, max_bet_to=1000)
-    assert talk_chance("bet_or_raise_to", view, amount=1000) == MEANINGFUL_TALK_CHANCE_RISKY
+    assert talk_chance("bet_or_raise_to", view) == MEANINGFUL_TALK_CHANCE
 
 
-def test_shoving_less_than_max_does_not_count_as_risky() -> None:
-    view = make_view(street_index=TURN, call_amount=0, own_bet=0, max_bet_to=1000)
-    assert talk_chance("bet_or_raise_to", view, amount=500) == MEANINGFUL_TALK_CHANCE
-
-
-def test_reacting_to_an_opponents_all_in_on_river_boosts_a_call_to_certain() -> None:
+def test_reacting_to_an_opponents_all_in_on_river_uses_meaningful_chance_for_a_call() -> None:
     view = make_view(street_index=RIVER, call_amount=500, own_bet=0, other_seats=[all_in_opponent()])
-    assert talk_chance("check_or_call", view) == MEANINGFUL_TALK_CHANCE_RISKY
+    assert talk_chance("check_or_call", view) == MEANINGFUL_TALK_CHANCE
 
 
-def test_reacting_to_an_opponents_all_in_on_river_boosts_a_fold_to_certain() -> None:
+def test_reacting_to_an_opponents_all_in_on_river_uses_meaningful_chance_for_a_fold() -> None:
     view = make_view(street_index=RIVER, call_amount=500, own_bet=0, other_seats=[all_in_opponent()])
-    assert talk_chance("fold", view) == MEANINGFUL_TALK_CHANCE_RISKY
+    assert talk_chance("fold", view) == MEANINGFUL_TALK_CHANCE
 
 
-def test_reacting_to_an_opponents_all_in_on_river_does_not_boost_a_free_check() -> None:
-    # edge case (e.g. a side pot already settled elsewhere) -- the risky boost
-    # only applies to the meaningful tier, ambient stays flat regardless
+def test_reacting_to_an_opponents_all_in_on_river_does_not_change_a_free_check() -> None:
+    # edge case (e.g. a side pot already settled elsewhere) -- a free check is
+    # still ambient regardless of how big a moment is happening around it
     view = make_view(street_index=RIVER, call_amount=0, own_bet=0, other_seats=[all_in_opponent()])
     assert talk_chance("check_or_call", view) == AMBIENT_TALK_CHANCE
-
-
-def test_a_folded_opponents_empty_stack_does_not_count_as_an_all_in() -> None:
-    folded_broke_seat = {"player_id": "villain", "bet": 0, "voluntarily_invested": True, "folded": True, "stack": 0}
-    view = make_view(street_index=RIVER, call_amount=500, own_bet=0, other_seats=[folded_broke_seat])
-    assert talk_chance("check_or_call", view) == MEANINGFUL_TALK_CHANCE  # not boosted
-
-
-def test_risky_boost_does_not_apply_preflop_or_flop() -> None:
-    for street in (PREFLOP, FLOP):
-        view = make_view(street_index=street, call_amount=500, own_bet=0, other_seats=[all_in_opponent()])
-        assert talk_chance("check_or_call", view) == MEANINGFUL_TALK_CHANCE
 
 
 # -- is_talk_eligible: rolls talk_chance against random.random() ------------

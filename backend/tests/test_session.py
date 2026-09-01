@@ -480,8 +480,17 @@ async def test_showdown_win_triggers_a_guaranteed_win_reaction_for_every_ai_winn
                 session.submit_human_action("bet_or_raise_to", legal.max_bet_to)
             else:
                 session.submit_human_action("check_or_call", None)
-        if any(e["type"] == "hand_result" for e in ws.events):
-            break
+        # hand_result now broadcasts BEFORE the win-reaction dialogue (see
+        # GameSession._run) rather than after, so its arrival alone no longer
+        # means every winner's reaction has already been broadcast too --
+        # wait for a win_reaction from each AI winner as well, or cancelling
+        # here could race a reaction that just hasn't fired yet.
+        hand_results = [e for e in ws.events if e["type"] == "hand_result"]
+        if hand_results:
+            ai_winners = {pid for pid in hand_results[0]["winners"] if pid != config.HUMAN_PLAYER_ID}
+            reacted = {e["player_id"] for e in ws.events if e["type"] == "win_reaction"}
+            if ai_winners <= reacted:
+                break
 
     session.task.cancel()
     with pytest.raises(asyncio.CancelledError):

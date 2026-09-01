@@ -8,7 +8,6 @@ providers must request both in one structured-output call.
 """
 
 # TODO(feat): whenever a bot talks, have a 90% chance for another bot to respond (only one bot can respond, not multiple) regardless of current position (limit only to one response to avoid using too much api calls; make sure if back n forth banter occurs at the reveal stage, the new hand does not start until ALL dialogue is finished). have checks for whenever dialogue is happening at any time, any other possible dialogue is in queue until the dialogue that occurred first is finished (this will avoid any overlapping audio).
-# TODO(feat): combine the MEANINGFUL_TALK_CHANCE and MEANINGFUL_TALK_CHANCE_RISKY together. whenever a high risk/meaningful play is happening, i want the bots to comment on it.
 
 from __future__ import annotations
 
@@ -145,62 +144,41 @@ def facing_a_raise(view: dict) -> bool:
 AMBIENT_TALK_CHANCE = 0.5
 
 # Chance for an inherently "meaningful" action -- raising/shoving, a real
-# fold (giving something up), or calling an actual bet/raise. High but not
-# guaranteed, the same across every street, so the table doesn't chatter on
-# literally every single one.
-MEANINGFUL_TALK_CHANCE = 0.90
-# Turn/river + a risky, all-in moment bumps a meaningful action all the way
-# to certain -- reacting to (or making) a shove is always worth a line.
-MEANINGFUL_TALK_CHANCE_RISKY = 1.0
+# fold (giving something up), or calling an actual bet/raise. Guaranteed: a
+# play worth actually paying attention to always gets a line, whether or not
+# it also happens to be a big, risky, all-in moment (there's no separate
+# tier for that anymore -- meaningful is already the ceiling).
+MEANINGFUL_TALK_CHANCE = 1.0
 
 
-def _is_risky_moment(action: str, amount: int | None, view: dict) -> bool:
-    """A turn/river moment worth extra excitement: this action is itself an
-    all-in shove, or some other still-live seat is already all-in and this
-    bot is reacting to that."""
-    legal = view["legal_actions"]
-    max_bet_to = legal.get("max_bet_to")
-    if action == "bet_or_raise_to" and amount is not None and max_bet_to is not None and amount >= max_bet_to:
-        return True
-    return any(
-        seat["player_id"] != view["your_player_id"] and not seat["folded"] and seat["stack"] == 0
-        for seat in view["seats"]
-    )
-
-
-def talk_chance(action: str, view: dict, amount: int | None = None) -> float:
+def talk_chance(action: str, view: dict) -> float:
     """The probability (0-1) that `action` ends up carrying a spoken line.
 
-    Two tiers: a "meaningful" action (raising/shoving, a real fold, calling
-    an actual bet) is highly likely to talk but not guaranteed
-    (`MEANINGFUL_TALK_CHANCE`), bumped further on turn/river when a risky,
-    all-in moment is in play. Anything otherwise silent (a free check, a
-    blind-limp call, a fold that never put in anything beyond a forced blind)
-    gets a flat, unscaled chance instead (`AMBIENT_TALK_CHANCE`) -- every turn
-    gets a real shot at a line, not just the loud ones.
+    A "meaningful" action (raising/shoving, a real fold, calling an actual
+    bet) always talks (`MEANINGFUL_TALK_CHANCE`). Anything otherwise silent
+    (a free check, a blind-limp call, a fold that never put in anything
+    beyond a forced blind) gets a flat, lower chance instead
+    (`AMBIENT_TALK_CHANCE`) -- every turn still gets a real shot at a line,
+    just not a guaranteed one.
     """
     street = view["street_index"]
-    risky = street in (TURN, RIVER) and _is_risky_moment(action, amount, view)
-
-    def meaningful() -> float:
-        return MEANINGFUL_TALK_CHANCE_RISKY if risky else MEANINGFUL_TALK_CHANCE
 
     if action == "fold":
         if street in (PREFLOP, FLOP):
             own_seat = next(s for s in view["seats"] if s["player_id"] == view["your_player_id"])
-            return meaningful() if own_seat["voluntarily_invested"] else AMBIENT_TALK_CHANCE
-        return meaningful()  # turn/river folds always give something real up
+            return MEANINGFUL_TALK_CHANCE if own_seat["voluntarily_invested"] else AMBIENT_TALK_CHANCE
+        return MEANINGFUL_TALK_CHANCE  # turn/river folds always give something real up
     if action == "bet_or_raise_to":
-        return meaningful()
+        return MEANINGFUL_TALK_CHANCE
     if action == "check_or_call":
-        return meaningful() if facing_a_raise(view) else AMBIENT_TALK_CHANCE
+        return MEANINGFUL_TALK_CHANCE if facing_a_raise(view) else AMBIENT_TALK_CHANCE
     return 0.0
 
 
-def is_talk_eligible(action: str, view: dict, amount: int | None = None) -> bool:
+def is_talk_eligible(action: str, view: dict) -> bool:
     """Whether this action ends up carrying a spoken trash-talk message this
     time -- a probabilistic roll against `talk_chance`, not a fixed rule."""
-    return random.random() < talk_chance(action, view, amount)
+    return random.random() < talk_chance(action, view)
 
 
 REACTION_JSON_SCHEMA: dict = {
