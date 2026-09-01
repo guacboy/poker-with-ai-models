@@ -15,6 +15,16 @@ from ..base import (
 )
 
 
+# Gemini 3's "thinking" is on by default and, like the OpenAI-compatible
+# reasoning models (see openai_compatible_player.py), spends real time on
+# hidden reasoning before ever emitting the visible reply -- confirmed live:
+# unset took 4.25s and 314 hidden "thoughts" tokens for one decide() call,
+# thinking_level="low" dropped that to ~1.5s with zero thoughts tokens.
+# thinking_budget (the older, raw-token-count knob other Gemini versions use)
+# is rejected outright (400) on this model -- thinking_level is what it wants.
+THINKING_CONFIG = types.ThinkingConfig(thinking_level="low")
+
+
 class GeminiPlayer:
     def __init__(self, player_id: str, display_name: str, api_key: str, model: str):
         self.player_id = player_id
@@ -29,6 +39,7 @@ class GeminiPlayer:
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_json_schema=RESPONSE_JSON_SCHEMA,
+                thinking_config=THINKING_CONFIG,
             ),
         )
         data = json.loads(response.text)
@@ -41,6 +52,7 @@ class GeminiPlayer:
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_json_schema=REACTION_JSON_SCHEMA,
+                thinking_config=THINKING_CONFIG,
             ),
         )
         data = json.loads(response.text)
@@ -53,6 +65,7 @@ class GeminiPlayer:
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_json_schema=REACTION_JSON_SCHEMA,
+                thinking_config=THINKING_CONFIG,
             ),
         )
         data = json.loads(response.text)

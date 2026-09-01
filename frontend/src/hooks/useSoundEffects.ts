@@ -1,19 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
+import { BETTING_SOUNDS } from "../utils/soundEffects";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 
 // Every effect file the game can ever request -- preloaded as soon as the
 // hook mounts (see below) so play() isn't the first time the browser fetches
 // them.
-const SOUND_FILES = [
-  "betting-1.mp3",
-  "betting-2.mp3",
-  "betting-3.mp3",
-  "cards.mp3",
-  "check.mp3",
-  "crowd-gasp.mp3",
-  "folding.mp3",
-];
+const SOUND_FILES = [...BETTING_SOUNDS, "cards.mp3", "check.mp3", "crowd-gasp.mp3", "folding.mp3"];
 
 /** Plays short one-shot sound effects (betting chips, all-in crowd gasp,
  * cards, folding, check). Unlike trash-talk audio, these don't need to be

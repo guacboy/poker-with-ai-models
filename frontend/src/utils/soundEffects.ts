@@ -1,6 +1,6 @@
 import type { ServerEvent } from "../types/game";
 
-const BETTING_SOUNDS = ["betting-1.mp3", "betting-2.mp3", "betting-3.mp3"];
+export const BETTING_SOUNDS = ["betting-1.mp3", "betting-2.mp3", "betting-3.mp3"];
 
 function randomBettingSound(): string {
   return BETTING_SOUNDS[Math.floor(Math.random() * BETTING_SOUNDS.length)];

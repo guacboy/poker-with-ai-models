@@ -148,8 +148,11 @@ class Hand:
         idx = self.state.actor_index
         return None if idx is None else self.seat_player_ids[idx]
 
+    def _index_of(self, player_id: str) -> int:
+        return self.seat_player_ids.index(player_id)
+
     def hole_cards_of(self, player_id: str) -> list[str]:
-        idx = self.seat_player_ids.index(player_id)
+        idx = self._index_of(player_id)
         return [_card_str(card) for card in self.state.hole_cards[idx]]
 
     def dealt_hole_cards_of(self, player_id: str) -> list[str]:
@@ -161,12 +164,10 @@ class Hand:
         return self._dealt_hole_cards[player_id]
 
     def stack_of(self, player_id: str) -> int:
-        idx = self.seat_player_ids.index(player_id)
-        return self.state.stacks[idx]
+        return self.state.stacks[self._index_of(player_id)]
 
     def bet_of(self, player_id: str) -> int:
-        idx = self.seat_player_ids.index(player_id)
-        return self.state.bets[idx]
+        return self.state.bets[self._index_of(player_id)]
 
     def is_folded(self, player_id: str) -> bool:
         return player_id in self._explicitly_folded_ids
@@ -230,7 +231,7 @@ class Hand:
         revealed cards directly (independent of pokerkit's live contention
         bookkeeping) so a shown loss still resolves to a real hand instead of
         None."""
-        idx = self.seat_player_ids.index(player_id)
+        idx = self._index_of(player_id)
         hand = self.state.get_hand(idx, 0, 0)
         if hand is not None:
             return hand

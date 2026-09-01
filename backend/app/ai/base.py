@@ -7,8 +7,6 @@ trash talk come back from a single call (per the "bundled" decision), so
 providers must request both in one structured-output call.
 """
 
-# TODO(feat): whenever a bot talks, have a 90% chance for another bot to respond (only one bot can respond, not multiple) regardless of current position (limit only to one response to avoid using too much api calls; make sure if back n forth banter occurs at the reveal stage, the new hand does not start until ALL dialogue is finished). have checks for whenever dialogue is happening at any time, any other possible dialogue is in queue until the dialogue that occurred first is finished (this will avoid any overlapping audio).
-
 from __future__ import annotations
 
 import random

@@ -7,6 +7,25 @@ import { useSoundEffects } from "./useSoundEffects";
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 const WS_BASE = API_BASE.replace(/^http/, "ws");
 
+/** POSTs a JSON body and returns the parsed JSON response. On a non-2xx
+ * response, surfaces the backend's own `detail` message (FastAPI's
+ * HTTPException shape) when there is one, falling back to `errorPrefix` plus
+ * the status code otherwise. Shared by every fetch call in this module
+ * (human actions, starting a tournament, the debug-only controls) so the
+ * fetch/error-handling shape only lives in one place. */
+async function postJson<T>(url: string, body: unknown, errorPrefix: string): Promise<T> {
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const detail = await resp.json().catch(() => ({}));
+    throw new Error(detail.detail ?? `${errorPrefix} (${resp.status})`);
+  }
+  return resp.json();
+}
+
 export interface PlayerActionEvent {
   id: string;
   playerId: string;
@@ -256,15 +275,7 @@ export function useGameSocket(tournamentId: string | null) {
   const submitAction = useCallback(
     async (action: ActionName, amount: number | null) => {
       if (!tournamentId) return;
-      const resp = await fetch(`${API_BASE}/tournament/${tournamentId}/action`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, amount }),
-      });
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}));
-        throw new Error(body.detail ?? `action failed (${resp.status})`);
-      }
+      await postJson(`${API_BASE}/tournament/${tournamentId}/action`, { action, amount }, "action failed");
     },
     [tournamentId]
   );
@@ -277,13 +288,11 @@ export async function createTournament(options?: { debug?: boolean }): Promise<{
   humanPlayerId: string;
   isDebug: boolean;
 }> {
-  const resp = await fetch(`${API_BASE}/tournament/new`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ human_name: "You", debug: options?.debug ?? false }),
-  });
-  if (!resp.ok) throw new Error(`failed to start tournament (${resp.status})`);
-  const body = await resp.json();
+  const body = await postJson<{ tournament_id: string; human_player_id: string; is_debug: boolean }>(
+    `${API_BASE}/tournament/new`,
+    { human_name: "You", debug: options?.debug ?? false },
+    "failed to start tournament"
+  );
   return { tournamentId: body.tournament_id, humanPlayerId: body.human_player_id, isDebug: body.is_debug };
 }
 
@@ -293,15 +302,7 @@ export type ForcedActionMode = "all_in" | "call" | "check" | "fold";
 // non-debug tournament, so there's no risk of accidentally affecting a real
 // (API-key-driven) game.
 async function debugPost(tournamentId: string, path: string, body: unknown): Promise<void> {
-  const resp = await fetch(`${API_BASE}/tournament/${tournamentId}/debug/${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!resp.ok) {
-    const detail = await resp.json().catch(() => ({}));
-    throw new Error(detail.detail ?? `debug request failed (${resp.status})`);
-  }
+  await postJson(`${API_BASE}/tournament/${tournamentId}/debug/${path}`, body, "debug request failed");
 }
 
 export function setForcedAiAction(tournamentId: string, mode: ForcedActionMode | null): Promise<void> {
