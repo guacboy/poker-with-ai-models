@@ -29,7 +29,7 @@ def test_new_tournament_has_correct_seats_and_stacks():
     assert all(p.stack == rules.STARTING_STACK for p in t.players)
     assert all(p.status is PlayerStatus.ACTIVE for p in t.players)
     assert all(p.buy_ins_used == 1 for p in t.players)
-    assert t.blinds == rules.BLIND_SCHEDULE[0]
+    assert t.blinds == rules.blinds_for_level(0)
     assert not t.is_over
 
 
@@ -61,7 +61,7 @@ def test_blind_level_advances_every_orbit():
     _play_and_forfeit_hand(t)
     assert t.hand_count == hands_for_one_orbit
     assert t.blind_level == 1
-    assert t.blinds == rules.BLIND_SCHEDULE[1]
+    assert t.blinds == rules.blinds_for_level(1)
 
 
 def test_orbit_completes_when_button_returns_to_a_repeat_holder():
