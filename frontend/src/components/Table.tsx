@@ -43,6 +43,10 @@ export function Table({
     : winningHandLabel;
   return (
     <div className="table-felt">
+      <div className="table-betting-line" aria-hidden="true" />
+      <div className="table-watermark" aria-hidden="true">
+        No Limit Texas Hold&apos;em
+      </div>
       <div className="table-center">
         <CommunityCards cards={boardCards} winningCards={winningBoardCards} />
         {resultLabel && <div className="winning-hand-label">{resultLabel}</div>}
