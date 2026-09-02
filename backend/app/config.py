@@ -68,13 +68,19 @@ HAND_RESULT_DISPLAY_SECONDS_NO_REVEAL = float(os.getenv("HAND_RESULT_DISPLAY_SEC
 # of dumping the whole runout on screen in one shot.
 BOARD_REVEAL_DELAY_SECONDS = float(os.getenv("BOARD_REVEAL_DELAY_SECONDS", "3.0"))
 
-# Distinct built-in Kokoro voice per seat, for tell-apart-ability only (not
-# personality). See app/tts/kokoro_tts.py.
+# Distinct built-in Kokoro voice per seat, picked to accent-match each
+# model's company/CEO (still spoken in English -- Kokoro's `lang` param
+# controls phonemization independently of `voice`, so a non-English voice
+# pack reads English text in its own accent instead of switching language;
+# see app/tts/kokoro_tts.py): Anthropic/Dario Amodei and OpenAI/Sam Altman
+# are both American; DeepSeek is a Chinese company; Gemini's parent Google
+# is led by Sundar Pichai, who is Indian; xAI/Elon Musk is a US citizen (no
+# South African voice exists in Kokoro's set to match his birthplace).
 VOICE_BY_PLAYER_ID: dict[str, str] = {
     "claude": "af_heart",
     "openai": "am_michael",
-    "deepseek": "bm_george",
-    "gemini": "bf_emma",
+    "deepseek": "zm_yunjian",
+    "gemini": "hf_alpha",
     "grok": "am_fenrir",
 }
 
