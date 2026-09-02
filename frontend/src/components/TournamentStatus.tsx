@@ -4,7 +4,7 @@ interface TournamentStatusProps {
   handCount: number;
   smallBlind: number;
   bigBlind: number;
-  orbitsUntilNextLevel: number;
+  handsUntilNextOrbit: number;
   players: PublicPlayer[];
   humanPlayerId: string;
 }
@@ -13,7 +13,7 @@ export function TournamentStatus({
   handCount,
   smallBlind,
   bigBlind,
-  orbitsUntilNextLevel,
+  handsUntilNextOrbit,
   players,
   humanPlayerId,
 }: TournamentStatusProps) {
@@ -23,7 +23,7 @@ export function TournamentStatus({
   const items = [
     `Hand #${handCount + 1}`,
     `Blinds ${smallBlind}/${bigBlind}`,
-    `Next level in ${orbitsUntilNextLevel} orbit${orbitsUntilNextLevel === 1 ? "" : "s"}`,
+    `Next orbit in ${handsUntilNextOrbit} hand${handsUntilNextOrbit === 1 ? "" : "s"}`,
     `${activeCount} players remaining`,
     human ? `Your buy-ins remaining: ${human.buy_ins_remaining}` : null,
   ].filter((item): item is string => item !== null);

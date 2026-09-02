@@ -45,6 +45,17 @@ class MockPlayer:
         self.player_id = player_id
         self.display_name = display_name
         self._rng = random.Random(seed)
+        # Debug-only (see GameSession.set_forced_dialogue): normally every
+        # line list below includes `None` entries so a mock stays quiet most
+        # of the time, same as it would look choosing not to talk for real.
+        # When forced, picks only ever land on an actual line, so a developer
+        # testing the speech-bubble/audio pipeline doesn't have to wait on luck.
+        self.force_dialogue = False
+
+    def _pick(self, lines: list[str | None]) -> str | None:
+        if self.force_dialogue:
+            lines = [line for line in lines if line is not None]
+        return self._rng.choice(lines)
 
     async def decide(self, view: dict) -> ActionResult:
         legal = view["legal_actions"]
@@ -66,11 +77,11 @@ class MockPlayer:
             span = hi - lo
             amount = clamp_amount(view, lo + int(span * self._rng.random() * 0.35))
 
-        message = self._rng.choice(TRASH_TALK_LINES)
+        message = self._pick(TRASH_TALK_LINES)
         return ActionResult(action=action, amount=amount, message=message)
 
     async def react_to_win(self, view: dict, hand_label: str | None, amount_won: int) -> str | None:
-        return self._rng.choice(WIN_REACTION_LINES)
+        return self._pick(WIN_REACTION_LINES)
 
     async def react_to_loss(self, view: dict, hand_label: str, amount_lost: int) -> str | None:
-        return self._rng.choice(LOSS_REACTION_LINES)
+        return self._pick(LOSS_REACTION_LINES)

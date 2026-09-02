@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   endRound,
   setAlwaysShowHands as postAlwaysShowHands,
+  setForceDialogue as postForceDialogue,
   setForcedAiAction,
   type ForcedActionMode,
 } from "../hooks/useGameSocket";
@@ -23,6 +24,7 @@ const FORCED_MODES: { mode: ForcedActionMode; label: string }[] = [
 export function DebugWidget({ tournamentId }: DebugWidgetProps) {
   const [activeMode, setActiveMode] = useState<ForcedActionMode | null>(null);
   const [alwaysShowHands, setAlwaysShowHands] = useState(false);
+  const [forceDialogue, setForceDialogue] = useState(false);
 
   const toggleMode = (mode: ForcedActionMode) => {
     // clicking the already-active mode clears it back to normal random play
@@ -35,6 +37,12 @@ export function DebugWidget({ tournamentId }: DebugWidgetProps) {
     const next = !alwaysShowHands;
     setAlwaysShowHands(next);
     postAlwaysShowHands(tournamentId, next).catch((err) => console.error(err));
+  };
+
+  const toggleForceDialogue = () => {
+    const next = !forceDialogue;
+    setForceDialogue(next);
+    postForceDialogue(tournamentId, next).catch((err) => console.error(err));
   };
 
   return (
@@ -54,6 +62,12 @@ export function DebugWidget({ tournamentId }: DebugWidgetProps) {
         onClick={toggleAlwaysShowHands}
       >
         Always Show Hands
+      </button>
+      <button
+        className={`debug-widget__btn${forceDialogue ? " debug-widget__btn--active" : ""}`}
+        onClick={toggleForceDialogue}
+      >
+        Force Dialogue
       </button>
       <button
         className="debug-widget__btn debug-widget__btn--danger"

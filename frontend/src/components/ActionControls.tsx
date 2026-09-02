@@ -261,21 +261,30 @@ export function ActionControls({
             </button>
           </>
         ) : (
-          // All three always render on the human's real turn, whether or not
-          // each one is actually legal this decision (e.g. facing a covering
-          // all-in with nothing left to raise with) -- an illegal one stays
-          // in place, just greyed out and unclickable, instead of the row
-          // reflowing depending on which actions happen to be available.
+          // Same four-button shape as the pre-select row above (Fold / Check
+          // / Call / Raise), rather than merging Check and Call into one
+          // relabeled button -- that merge used to make it look like the
+          // Check option had vanished the instant it became your real turn
+          // (four buttons while waiting, only three once it's on the clock).
+          // Whichever of Check/Call doesn't apply this decision just stays in
+          // place, greyed out, same as every other inapplicable option here.
           <>
             <button className="btn btn--fold" disabled={!can_fold} onClick={() => onAction("fold", null)}>
               Fold
             </button>
             <button
               className="btn btn--call"
-              disabled={!can_check_or_call}
+              disabled={!can_check_or_call || call_amount > 0}
               onClick={() => onAction("check_or_call", null)}
             >
-              {call_amount > 0 ? `Call ${formatBB(call_amount, bigBlind)}` : "Check"}
+              Check
+            </button>
+            <button
+              className="btn btn--call"
+              disabled={!can_check_or_call || call_amount === 0}
+              onClick={() => onAction("check_or_call", null)}
+            >
+              {call_amount > 0 ? `Call ${formatBB(call_amount, bigBlind)}` : "Call"}
             </button>
             <button
               className="btn btn--raise"

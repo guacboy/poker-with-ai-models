@@ -48,6 +48,7 @@ class GameSession:
     is_debug: bool = False
     always_show_hands: bool = False
     forced_ai_action: str | None = None
+    forced_dialogue: bool = False
     websockets: set[WebSocket] = field(default_factory=set)
     pending_human_action: asyncio.Future | None = field(default=None, init=False)
     task: asyncio.Task | None = field(default=None, init=False)
@@ -126,6 +127,19 @@ class GameSession:
         if not self.is_debug:
             raise DebugOnlyError("always-show-hands is a debug-only control")
         self.always_show_hands = enabled
+
+    def set_forced_dialogue(self, enabled: bool) -> None:
+        """Debug-only: guarantees an actual spoken line on every mock action
+        and reaction instead of leaving it up to MockPlayer's own randomness
+        (which stays quiet most of the time by design) -- lets a developer
+        exercise the speech-bubble/audio pipeline without waiting on luck.
+        Every ai_players value is a MockPlayer in a debug session (see
+        GameSession.new), so setting the attribute directly is safe here."""
+        if not self.is_debug:
+            raise DebugOnlyError("forced dialogue is a debug-only control")
+        self.forced_dialogue = enabled
+        for player in self.ai_players.values():
+            player.force_dialogue = enabled
 
     async def broadcast_snapshot(self) -> None:
         """Nudges connected clients with a fresh state snapshot immediately,
@@ -407,7 +421,7 @@ class GameSession:
                         self.tournament.apply_action(actor_id, fallback, None)
                         result = ActionResult(action=fallback, amount=None, message=None)
 
-                    if not is_talk_eligible(result.action, view):
+                    if not self.forced_dialogue and not is_talk_eligible(result.action, view):
                         result.message = None
 
                     audio_base64, audio_duration = await self._synthesize_for(actor_id, result.message)

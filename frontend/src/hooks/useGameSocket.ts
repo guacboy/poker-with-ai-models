@@ -61,6 +61,10 @@ interface GameSocketState {
   // the board cards that were actually part of that winning hand -- empty
   // outside the same window winningHandLabel is set for
   winningBoardCards: string[];
+  // the most recently handled event's type, used (alongside publicState) to
+  // derive isAwaitingHumanAction below -- not meant to be read directly by
+  // components
+  lastEventType: ServerEvent["type"] | null;
 }
 
 type Action =
@@ -81,6 +85,7 @@ const initialState: GameSocketState = {
   handResultWinners: null,
   winningHandLabel: null,
   winningBoardCards: [],
+  lastEventType: null,
 };
 
 function formatActionLabel(
@@ -129,120 +134,128 @@ function reducer(state: GameSocketState, action: Action): GameSocketState {
       return { ...state, connected: false };
     case "server_event": {
       const event = action.event;
-      switch (event.type) {
-        case "snapshot":
-          return { ...state, publicState: event.state };
-        case "hand_started":
-          return {
-            ...state,
-            publicState: event.state,
-            // actorView is deliberately left as-is here (not reset to null):
-            // the human's action controls stay on screen (disabled) between
-            // their turns instead of disappearing, so this keeps the last
-            // known legal_actions shape around as a placeholder until the
-            // next "awaiting_action" event replaces it with the real one
-            lastActionLabelByPlayer: {},
-            lastHandSnapshot: event.state.hand,
-            handResultWinners: null,
-            winningHandLabel: null,
-            winningBoardCards: [],
-          };
-        case "awaiting_action":
-          return { ...state, actorView: event.view };
-        case "board_dealt":
-          // a suspenseful runout stage (e.g. everyone's all-in) -- refresh
-          // the board/seat snapshot and clear stale action labels the same
-          // way a street change bundled into player_action would
-          return {
-            ...state,
-            publicState: event.state,
-            lastHandSnapshot: event.state.hand,
-            lastActionLabelByPlayer: foldedOnlyLabels(state.lastActionLabelByPlayer, event.state.hand?.seats),
-          };
-        case "player_action": {
-          const priorStreet = state.publicState?.hand?.street_index ?? null;
-          const newStreet = event.state.hand?.street_index ?? null;
-          const streetChanged = newStreet !== priorStreet;
-          const labelsBase = streetChanged
-            ? foldedOnlyLabels(state.lastActionLabelByPlayer, event.state.hand?.seats)
-            : state.lastActionLabelByPlayer;
-          // the live, in-hand stack (not PublicState.players[].stack, which only
-          // reflects stack-at-start-of-hand until finish_hand() runs) is what
-          // actually tells us whether this action put them all in
-          const resultingStack =
-            event.state.hand?.seats.find((s) => s.player_id === event.player_id)?.stack ?? -1;
-          return {
-            ...state,
-            publicState: event.state,
-            // see the "hand_started" case above -- actorView is left in
-            // place so the controls stay visible (disabled) until it's the
-            // human's turn again
-            lastHandSnapshot: event.state.hand,
-            lastActionLabelByPlayer: streetChanged
-              ? labelsBase
-              : {
-                  ...labelsBase,
-                  [event.player_id]: formatActionLabel(
-                    event.action,
-                    event.amount,
-                    event.call_amount,
-                    resultingStack,
-                    event.state.big_blind
-                  ),
-                },
-            lastPlayerAction: {
-              id: `${event.player_id}-${Date.now()}-${Math.random()}`,
-              playerId: event.player_id,
-              action: event.action,
-              amount: event.amount,
-              message: event.message,
-              audioBase64: event.audio_base64,
-              audioDuration: event.audio_duration,
-            },
-          };
+      const nextState = ((): GameSocketState => {
+        switch (event.type) {
+          case "snapshot":
+            return { ...state, publicState: event.state };
+          case "hand_started":
+            return {
+              ...state,
+              publicState: event.state,
+              // actorView is deliberately left as-is here (not reset to null):
+              // the human's action controls stay on screen (disabled) between
+              // their turns instead of disappearing, so this keeps the last
+              // known legal_actions shape around as a placeholder until the
+              // next "awaiting_action" event replaces it with the real one
+              lastActionLabelByPlayer: {},
+              lastHandSnapshot: event.state.hand,
+              handResultWinners: null,
+              winningHandLabel: null,
+              winningBoardCards: [],
+            };
+          case "awaiting_action":
+            return { ...state, actorView: event.view };
+          case "board_dealt":
+            // a suspenseful runout stage (e.g. everyone's all-in) -- refresh
+            // the board/seat snapshot and clear stale action labels the same
+            // way a street change bundled into player_action would
+            return {
+              ...state,
+              publicState: event.state,
+              lastHandSnapshot: event.state.hand,
+              lastActionLabelByPlayer: foldedOnlyLabels(state.lastActionLabelByPlayer, event.state.hand?.seats),
+            };
+          case "player_action": {
+            const priorStreet = state.publicState?.hand?.street_index ?? null;
+            const newStreet = event.state.hand?.street_index ?? null;
+            const streetChanged = newStreet !== priorStreet;
+            const labelsBase = streetChanged
+              ? foldedOnlyLabels(state.lastActionLabelByPlayer, event.state.hand?.seats)
+              : state.lastActionLabelByPlayer;
+            // the live, in-hand stack (not PublicState.players[].stack, which only
+            // reflects stack-at-start-of-hand until finish_hand() runs) is what
+            // actually tells us whether this action put them all in
+            const resultingStack =
+              event.state.hand?.seats.find((s) => s.player_id === event.player_id)?.stack ?? -1;
+            return {
+              ...state,
+              publicState: event.state,
+              // see the "hand_started" case above -- actorView is left in
+              // place so the controls stay visible (disabled) until it's the
+              // human's turn again
+              lastHandSnapshot: event.state.hand,
+              lastActionLabelByPlayer: streetChanged
+                ? labelsBase
+                : {
+                    ...labelsBase,
+                    [event.player_id]: formatActionLabel(
+                      event.action,
+                      event.amount,
+                      event.call_amount,
+                      resultingStack,
+                      event.state.big_blind
+                    ),
+                  },
+              lastPlayerAction: {
+                id: `${event.player_id}-${Date.now()}-${Math.random()}`,
+                playerId: event.player_id,
+                action: event.action,
+                amount: event.amount,
+                message: event.message,
+                audioBase64: event.audio_base64,
+                audioDuration: event.audio_duration,
+              },
+            };
+          }
+          case "hand_result":
+            // event.state.hand is always null here (the hand just finished) --
+            // keep the frozen lastHandSnapshot from the final player_action so
+            // the board/cards stay on screen through the result display window
+            return {
+              ...state,
+              publicState: event.state,
+              handResultWinners: event.winners,
+              winningHandLabel: event.winning_hand_label,
+              winningBoardCards: event.winning_board_cards,
+            };
+          case "win_reaction":
+          case "loss_reaction":
+            // a guaranteed post-showdown reaction (gloating or sore-loser alike)
+            // -- reuses lastPlayerAction so the same speech-bubble/audio-queue
+            // effect in App.tsx picks it up, but doesn't touch
+            // publicState/lastActionLabelByPlayer since no actual poker action
+            // happened
+            return {
+              ...state,
+              lastPlayerAction: {
+                id: `${event.player_id}-${Date.now()}-${Math.random()}`,
+                playerId: event.player_id,
+                action: null,
+                amount: null,
+                message: event.message,
+                audioBase64: event.audio_base64,
+                audioDuration: event.audio_duration,
+              },
+            };
+          case "tournament_over":
+            return { ...state, tournamentOver: true, winnerPlayerId: event.winner_player_id };
+          case "error":
+            return { ...state, error: event.message };
+          default:
+            return state;
         }
-        case "hand_result":
-          // event.state.hand is always null here (the hand just finished) --
-          // keep the frozen lastHandSnapshot from the final player_action so
-          // the board/cards stay on screen through the result display window
-          return {
-            ...state,
-            publicState: event.state,
-            handResultWinners: event.winners,
-            winningHandLabel: event.winning_hand_label,
-            winningBoardCards: event.winning_board_cards,
-          };
-        case "win_reaction":
-        case "loss_reaction":
-          // a guaranteed post-showdown reaction (gloating or sore-loser alike)
-          // -- reuses lastPlayerAction so the same speech-bubble/audio-queue
-          // effect in App.tsx picks it up, but doesn't touch
-          // publicState/lastActionLabelByPlayer since no actual poker action
-          // happened
-          return {
-            ...state,
-            lastPlayerAction: {
-              id: `${event.player_id}-${Date.now()}-${Math.random()}`,
-              playerId: event.player_id,
-              action: null,
-              amount: null,
-              message: event.message,
-              audioBase64: event.audio_base64,
-              audioDuration: event.audio_duration,
-            },
-          };
-        case "tournament_over":
-          return { ...state, tournamentOver: true, winnerPlayerId: event.winner_player_id };
-        case "error":
-          return { ...state, error: event.message };
-        default:
-          return state;
-      }
+      })();
+      // isAwaitingHumanAction (computed in useGameSocket below) needs to know
+      // whether an "awaiting_action" event was the most recent thing that
+      // happened -- not just whether current_actor_id happens to equal the
+      // human right now, which flips to the human well before the backend is
+      // actually ready to accept their action (see useGameSocket)
+      return { ...nextState, lastEventType: event.type };
     }
   }
 }
 
-export function useGameSocket(tournamentId: string | null) {
+export function useGameSocket(tournamentId: string | null, humanPlayerId: string) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const wsRef = useRef<WebSocket | null>(null);
   const { play: playSoundEffect } = useSoundEffects();
@@ -280,7 +293,22 @@ export function useGameSocket(tournamentId: string | null) {
     [tournamentId]
   );
 
-  return { state, submitAction };
+  // True only once the backend has actually created a pending future for the
+  // human's action (the moment it broadcasts "awaiting_action"), not merely
+  // whenever current_actor_id happens to already equal the human. Those two
+  // diverge for a real window: an action's own broadcast already reflects
+  // pokerkit's advanced turn pointer (so current_actor_id can equal the human
+  // immediately), but the backend only gets around to actually awaiting their
+  // input after pacing out that action's own dialogue/audio first -- clicking
+  // during that window would 400 against a turn nothing is waiting on yet.
+  // The "snapshot" branch only matters right after connecting (or
+  // reconnecting): there's no fresh "awaiting_action" to replay in that case,
+  // so current_actor_id is the only signal available, same as before this fix.
+  const isAwaitingHumanAction =
+    state.lastEventType === "awaiting_action" ||
+    (state.lastEventType === "snapshot" && state.publicState?.hand?.current_actor_id === humanPlayerId);
+
+  return { state, submitAction, isAwaitingHumanAction };
 }
 
 export async function createTournament(options?: { debug?: boolean }): Promise<{
@@ -311,6 +339,10 @@ export function setForcedAiAction(tournamentId: string, mode: ForcedActionMode |
 
 export function setAlwaysShowHands(tournamentId: string, enabled: boolean): Promise<void> {
   return debugPost(tournamentId, "always_show_hands", { enabled });
+}
+
+export function setForceDialogue(tournamentId: string, enabled: boolean): Promise<void> {
+  return debugPost(tournamentId, "force_dialogue", { enabled });
 }
 
 export function endRound(tournamentId: string): Promise<void> {

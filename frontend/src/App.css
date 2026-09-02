@@ -28,28 +28,28 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
 }
 
 .start-overlay__button {
   background: var(--accent);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 14px 28px;
+  border-radius: 12px;
+  padding: 18px 36px;
   font-weight: 700;
-  font-size: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  font-size: 22px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
 }
 
 .start-overlay__debug-button {
   background: #3a3f4a;
   color: var(--text-dim);
   border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
+  border-radius: 9px;
+  padding: 10px 20px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 17px;
 }
 
 /* ---------- Debug widget ---------- */
@@ -60,17 +60,17 @@
   right: 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   background: rgba(13, 17, 23, 0.92);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px;
-  min-width: 150px;
+  border-radius: 10px;
+  padding: 14px;
+  min-width: 220px;
   z-index: 20;
 }
 
 .debug-widget__title {
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -83,9 +83,9 @@
   background: #2a2f3a;
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 12px;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 16px;
   font-weight: 600;
   text-align: left;
 }
@@ -111,13 +111,19 @@
 
 /* ---------- Game screen layout ---------- */
 
+/* A hard viewport lock, not just a minimum -- everything below is sized to
+   fit inside exactly this, so the page itself should never need to scroll.
+   overflow: hidden is a backstop, not the primary mechanism: table-felt's
+   own width formula (see below) is what actually keeps the whole vertical
+   stack (status bar + table + controls) within one screen's height. */
 .game-screen {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
-  min-height: 100svh;
+  gap: 10px;
+  padding: 14px;
+  height: 100svh;
+  overflow: hidden;
 }
 
 .game-main {
@@ -125,9 +131,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
+}
+
+/* The debug widget is `position: fixed` in the top-right corner, so it
+   floats above the document flow regardless of how centered content around
+   it is sized. This reserves matching space on the right so the centered
+   content shifts left clear of it instead of running underneath -- the
+   table itself doesn't need a matching size override the way it once did:
+   its own width formula is bound by viewport *height* on any reasonably
+   wide screen, well short of colliding with this reserved strip. */
+.game-screen--debug {
+  padding-right: 260px;
 }
 
 .tournament-status {
@@ -135,17 +153,18 @@
   flex-wrap: wrap;
   justify-content: center;
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: 16px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 0;
+  padding: 6px 0;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
+  flex-shrink: 0;
 }
 
 .tournament-status__item {
-  padding: 0 16px;
+  padding: 0 18px;
   border-right: 1px solid var(--border);
   line-height: 1.4;
 }
@@ -158,10 +177,19 @@
 
 .table-felt {
   position: relative;
-  width: min(920px, 96vw);
-  height: min(480px, 56vh);
-  min-height: 360px;
-  margin-top: 48px;
+  /* Sized off the viewport, not a fixed pixel target, so it always fits the
+     current window instead of needing scroll or clipping anything: capped
+     by an absolute ceiling (1500px, so it doesn't balloon on an ultrawide),
+     90% of viewport width, and -- the term that actually matters on a normal
+     landscape window -- 50% of viewport height re-expressed as a width via
+     the table's own aspect ratio, so the *height* aspect-ratio derives below
+     never exceeds roughly half the screen. flex-shrink isn't relied on here;
+     this formula is what keeps the whole status-bar + table + controls
+     column within one screen's height on its own. */
+  width: min(1500px, 90vw, calc(50vh * 1.9));
+  aspect-ratio: 1.9;
+  flex-shrink: 0;
+  margin-top: 4px;
   border-radius: 50%;
   /* a faint diagonal weave on top of the felt gradient -- purely decorative
      texture, low enough contrast that it reads as fabric instead of a
@@ -172,16 +200,16 @@
       rgba(255, 255, 255, 0.025) 0px,
       rgba(255, 255, 255, 0.025) 1px,
       transparent 1px,
-      transparent 5px
+      transparent 6px
     ),
     radial-gradient(ellipse at center, #1d5c3a 0%, #123c26 70%, #0d2c1c 100%);
-  border: 10px solid #4b2f1a;
+  border: 12px solid #4b2f1a;
   /* a lighter inner ring plus a darker outer one -- reads as a beveled
      wooden rail catching light instead of a single flat brown band */
   box-shadow:
-    inset 0 0 40px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 3px rgba(120, 78, 42, 0.9),
-    0 12px 28px rgba(0, 0, 0, 0.45);
+    inset 0 0 50px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 4px rgba(120, 78, 42, 0.9),
+    0 14px 32px rgba(0, 0, 0, 0.45);
 }
 
 /* the stitched "betting line" real tables mark partway between the rail and
@@ -190,9 +218,9 @@
    green oval */
 .table-betting-line {
   position: absolute;
-  inset: 30px;
+  inset: 34px;
   border-radius: 50%;
-  border: 2px dashed rgba(255, 215, 130, 0.18);
+  border: 3px dashed rgba(255, 215, 130, 0.18);
   pointer-events: none;
 }
 
@@ -205,7 +233,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   color: rgba(255, 255, 255, 0.14);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.18em;
@@ -227,22 +255,22 @@
 .community-cards {
   display: flex;
   gap: 6px;
-  perspective: 600px;
+  perspective: 700px;
 }
 
 .pot-display {
   color: #ffd166;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 16px;
   background: rgba(0, 0, 0, 0.4);
-  border-radius: 12px;
-  padding: 2px 10px;
+  border-radius: 14px;
+  padding: 2px 12px;
 }
 
 .winning-hand-label {
   color: #ffd166;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 15px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   animation: card-reveal 0.45s ease-out;
@@ -251,26 +279,26 @@
 /* ---------- Playing cards ---------- */
 
 .playing-card {
-  width: 38px;
-  height: 54px;
-  border-radius: 5px;
+  width: 44px;
+  height: 62px;
+  border-radius: 6px;
   background: white;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
 }
 
 /* board cards that were part of the just-shown winning hand -- nudged
    upward with a gold glow to call out e.g. the 4 cards making a straight */
 .playing-card--highlighted {
-  transform: translateY(-10px);
-  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.45), 0 0 0 2px #ffd166;
+  transform: translateY(-12px);
+  box-shadow: 0 7px 12px rgba(0, 0, 0, 0.45), 0 0 0 2px #ffd166;
 }
 
 .playing-card--red {
@@ -282,7 +310,7 @@
 }
 
 .playing-card--back {
-  background: repeating-linear-gradient(45deg, #3050a0, #3050a0 4px, #24407e 4px, #24407e 8px);
+  background: repeating-linear-gradient(45deg, #3050a0, #3050a0 5px, #24407e 5px, #24407e 10px);
   border: 1px solid #16305e;
 }
 
@@ -293,7 +321,7 @@
 }
 
 .playing-card__suit {
-  font-size: 16px;
+  font-size: 18px;
 }
 
 /* newly dealt-in cards (a fresh street of the board, or a hole card just
@@ -322,8 +350,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  width: 130px;
+  gap: 5px;
+  width: 148px;
 }
 
 .seat-pos-0 {
@@ -353,25 +381,25 @@
 
 .seat__cards {
   display: flex;
-  gap: 3px;
-  border-radius: 8px;
+  gap: 4px;
+  border-radius: 9px;
 }
 
 .seat__cards--winner {
-  border-radius: 8px;
+  border-radius: 9px;
   animation: winner-glow 1.1s ease-in-out infinite alternate;
 }
 
 @keyframes winner-glow {
   from {
     box-shadow:
-      0 0 6px 2px rgba(255, 209, 102, 0.55),
-      0 0 14px 4px rgba(255, 209, 102, 0.3);
+      0 0 7px 2px rgba(255, 209, 102, 0.55),
+      0 0 16px 5px rgba(255, 209, 102, 0.3);
   }
   to {
     box-shadow:
-      0 0 14px 5px rgba(255, 209, 102, 0.9),
-      0 0 26px 10px rgba(255, 209, 102, 0.55);
+      0 0 16px 6px rgba(255, 209, 102, 0.9),
+      0 0 30px 12px rgba(255, 209, 102, 0.55);
   }
 }
 
@@ -387,10 +415,10 @@
 .seat__info {
   background: rgba(13, 17, 23, 0.85);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 4px 10px;
+  border-radius: 9px;
+  padding: 5px 12px;
   text-align: center;
-  min-width: 110px;
+  min-width: 126px;
 }
 
 .seat--acting .seat__info {
@@ -401,13 +429,13 @@
 @keyframes acting-glow {
   from {
     box-shadow:
-      0 0 6px 2px rgba(255, 255, 255, 0.55),
-      0 0 14px 4px rgba(255, 255, 255, 0.3);
+      0 0 7px 2px rgba(255, 255, 255, 0.55),
+      0 0 16px 5px rgba(255, 255, 255, 0.3);
   }
   to {
     box-shadow:
-      0 0 14px 5px rgba(255, 255, 255, 0.9),
-      0 0 26px 10px rgba(255, 255, 255, 0.55);
+      0 0 16px 6px rgba(255, 255, 255, 0.9),
+      0 0 30px 12px rgba(255, 255, 255, 0.55);
   }
 }
 
@@ -431,16 +459,16 @@
 
 .seat__name {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .seat__avatar {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   /* the source PNGs have transparent backgrounds and wildly inconsistent
      native sizes/aspect ratios -- a fixed-size circle with a dark backing
@@ -456,28 +484,28 @@
 }
 
 .seat__last-action {
-  font-size: 11px;
+  font-size: 13px;
   font-style: italic;
   color: var(--text-dim);
 }
 
 .seat__stack {
-  font-size: 13px;
+  font-size: 15px;
   color: #ffd166;
 }
 
 .seat__badges {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   justify-content: center;
   margin-top: 2px;
-  min-height: 16px;
+  min-height: 18px;
 }
 
 .badge {
-  font-size: 10px;
-  border-radius: 4px;
-  padding: 0 4px;
+  font-size: 11px;
+  border-radius: 5px;
+  padding: 0 5px;
   font-weight: 700;
 }
 
@@ -497,7 +525,7 @@
 }
 
 .seat__eliminated-tag {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--danger);
   font-weight: 700;
 }
@@ -505,9 +533,9 @@
 .seat__bet-chip {
   background: #2a2f3a;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1px 8px;
-  font-size: 12px;
+  border-radius: 12px;
+  padding: 1px 9px;
+  font-size: 14px;
   color: #ffd166;
 }
 
@@ -518,21 +546,21 @@
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-bottom: 8px;
+  margin-bottom: 9px;
   background: white;
   color: #111;
-  border-radius: 10px;
-  padding: 6px 10px;
-  font-size: 12px;
+  border-radius: 11px;
+  padding: 7px 12px;
+  font-size: 14px;
   /* an absolutely positioned box with no explicit width shrink-wraps to
      min-content instead of growing up to max-width -- for the side bubbles
      below (positioned via `right`/`left` with no matching `left`/`right`)
      that collapses to one word per line even with room to spare, so width
      has to be stated explicitly for max-width to actually take effect */
   width: max-content;
-  max-width: 160px;
+  max-width: 190px;
   text-align: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.4);
   animation: bubble-in-top 0.15s ease-out;
   z-index: 5;
 }
@@ -542,7 +570,7 @@
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border: 6px solid transparent;
+  border: 7px solid transparent;
   border-top-color: white;
 }
 
@@ -558,9 +586,9 @@
   right: 100%;
   transform: translateY(-50%);
   margin-bottom: 0;
-  margin-right: 10px;
+  margin-right: 12px;
   animation-name: bubble-in-left;
-  max-width: 220px;
+  max-width: 250px;
 }
 
 .seat-pos-4 .speech-bubble__tail,
@@ -583,9 +611,9 @@
   right: auto;
   transform: translateY(-50%);
   margin-bottom: 0;
-  margin-left: 10px;
+  margin-left: 12px;
   animation-name: bubble-in-right;
-  max-width: 220px;
+  max-width: 250px;
 }
 
 .seat-pos-1 .speech-bubble__tail,
@@ -602,7 +630,7 @@
 @keyframes bubble-in-top {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(4px);
+    transform: translateX(-50%) translateY(5px);
   }
   to {
     opacity: 1;
@@ -613,7 +641,7 @@
 @keyframes bubble-in-left {
   from {
     opacity: 0;
-    transform: translateY(-50%) translateX(4px);
+    transform: translateY(-50%) translateX(5px);
   }
   to {
     opacity: 1;
@@ -624,7 +652,7 @@
 @keyframes bubble-in-right {
   from {
     opacity: 0;
-    transform: translateY(-50%) translateX(-4px);
+    transform: translateY(-50%) translateX(-5px);
   }
   to {
     opacity: 1;
@@ -638,12 +666,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  min-height: 60px;
+  gap: 9px;
+  min-height: 68px;
+  flex-shrink: 0;
   /* the human's seat sits near the bottom edge of the table oval, so its bet
      chip can extend past the felt -- this margin keeps it from overlapping
      the controls right below */
-  margin-top: 30px;
+  margin-top: 18px;
 }
 
 .action-controls--disabled {
@@ -653,20 +682,20 @@
 .action-controls__raise {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
 
 .action-controls__raise input[type="range"] {
-  width: 220px;
+  width: 250px;
 }
 
 .action-controls__raise input[type="number"] {
-  width: 90px;
+  width: 100px;
   background: var(--panel);
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 6px;
-  padding: 4px 6px;
+  border-radius: 7px;
+  padding: 4px 7px;
 }
 
 .action-controls__raise input:disabled {
@@ -675,31 +704,31 @@
 }
 
 .action-controls__unit {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--text-dim);
 }
 
 .action-controls__presets {
   display: flex;
-  gap: 8px;
+  gap: 9px;
 }
 
 .action-controls__autoplay-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-dim);
 }
 
 .action-controls__buttons {
   display: flex;
-  gap: 10px;
+  gap: 11px;
 }
 
 .btn {
   border: none;
-  border-radius: 6px;
-  padding: 10px 20px;
+  border-radius: 7px;
+  padding: 11px 22px;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 /* An action that isn't legal this decision (e.g. no chips left to raise
@@ -729,8 +758,8 @@
   background: var(--panel);
   border: 1px solid var(--border);
   color: var(--text-dim);
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 7px 14px;
+  font-size: 14px;
 }
 
 .btn--preset:hover:not(:disabled) {
@@ -763,7 +792,7 @@
 
 .btn--preselect-armed {
   opacity: 1;
-  box-shadow: 0 0 0 2px var(--warn);
+  box-shadow: 0 0 0 3px var(--warn);
 }
 
 .btn--preselect-armed:hover:not(:disabled) {
@@ -776,14 +805,16 @@
   background: var(--accent);
   color: white;
   font-weight: 700;
-  padding: 10px 20px;
-  border-radius: 8px;
+  padding: 11px 22px;
+  border-radius: 9px;
+  flex-shrink: 0;
 }
 
 .error-banner {
   background: var(--danger);
   color: white;
-  padding: 6px 16px;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 7px 18px;
+  border-radius: 9px;
+  font-size: 15px;
+  flex-shrink: 0;
 }

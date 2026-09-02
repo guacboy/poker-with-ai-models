@@ -41,7 +41,7 @@ export interface PublicState {
   blind_level: number;
   small_blind: number;
   big_blind: number;
-  orbits_until_next_level: number;
+  hands_until_next_orbit: number;
   is_over: boolean;
   winner_player_id: string | null;
   players: PublicPlayer[];

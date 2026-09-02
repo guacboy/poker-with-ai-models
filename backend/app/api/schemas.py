@@ -28,3 +28,7 @@ class ForcedActionRequest(BaseModel):
 
 class AlwaysShowHandsRequest(BaseModel):
     enabled: bool
+
+
+class ForceDialogueRequest(BaseModel):
+    enabled: bool

@@ -67,7 +67,10 @@ def test_blind_level_advances_every_orbit():
 def test_orbit_completes_when_button_returns_to_a_repeat_holder():
     t = make_tournament()
     assert rules.ORBITS_PER_BLIND_LEVEL == 1, "this test assumes one orbit per level"
-    assert t.orbits_until_next_level == rules.ORBITS_PER_BLIND_LEVEL
+    # before any hand has been dealt, orbit_seen_button_ids is still empty --
+    # the very first orbit takes NUM_SEATS + 1 hands to register (see the
+    # note on this in test_blind_level_advances_every_orbit)
+    assert t.hands_until_next_orbit == rules.NUM_SEATS + 1
 
     # walk the button around the full table once -- everyone gets a first,
     # distinct turn, so no repeat yet (see the note above on the +1)
@@ -83,7 +86,9 @@ def test_orbit_completes_when_button_returns_to_a_repeat_holder():
     # repeat holder rather than starting empty)
     _play_and_forfeit_hand(t)
     assert t.orbits_completed_this_level == 0
-    assert t.orbits_until_next_level == rules.ORBITS_PER_BLIND_LEVEL
+    # re-seeded with just this hand's (repeat) button holder -- a fresh full
+    # orbit's worth of hands, same length as any other undisturbed orbit
+    assert t.hands_until_next_orbit == rules.NUM_SEATS
     assert t.blind_level == 1
 
 
@@ -104,6 +109,33 @@ def test_orbit_length_shrinks_as_players_bust():
     # blind level (not the orbit counter) is the observable signal here --
     # same reasoning as test_orbit_completes_when_button_returns_to_a_repeat_holder.
     assert t.blind_level >= 1
+
+
+def test_hands_until_next_orbit_counts_down_each_hand_then_resets():
+    t = make_tournament()
+    # the very first orbit takes NUM_SEATS + 1 hands to register (see
+    # test_orbit_completes_when_button_returns_to_a_repeat_holder), so it
+    # counts down from NUM_SEATS to 1 before the (NUM_SEATS + 1)th hand
+    # completes the orbit and resets the countdown to a fresh NUM_SEATS
+    actual = []
+    for _ in range(rules.NUM_SEATS + 1):
+        _play_and_forfeit_hand(t)
+        actual.append(t.hands_until_next_orbit)
+    assert actual == list(range(rules.NUM_SEATS, 0, -1)) + [rules.NUM_SEATS]
+
+
+def test_hands_until_next_orbit_ignores_a_seen_holder_who_has_since_busted():
+    """Regression guard: without intersecting orbit_seen_button_ids with the
+    currently active players, a seat that already held the button this orbit
+    and then busted out entirely would still count as "seen", undercounting
+    how many hands are actually left before the orbit can complete."""
+    t = make_tournament()
+    t.orbit_seen_button_ids = {t.players[0].id, t.players[1].id}
+    t.players[0].status = PlayerStatus.ELIMINATED
+
+    active_count = rules.NUM_SEATS - 1  # one of the six just busted
+    still_seen_and_active = 1  # only players[1] both held the button and is still active
+    assert t.hands_until_next_orbit == active_count - still_seen_and_active + 1
 
 
 def test_rebuy_up_to_max_then_eliminated():

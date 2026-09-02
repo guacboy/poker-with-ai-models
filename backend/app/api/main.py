@@ -10,6 +10,7 @@ from .. import config
 from .schemas import (
     ActionRequest,
     AlwaysShowHandsRequest,
+    ForceDialogueRequest,
     ForcedActionRequest,
     NewTournamentRequest,
     NewTournamentResponse,
@@ -85,6 +86,16 @@ async def set_always_show_hands(tournament_id: str, body: AlwaysShowHandsRequest
     except DebugOnlyError as exc:
         raise HTTPException(403, str(exc)) from exc
     await session.broadcast_snapshot()
+    return {"ok": True}
+
+
+@app.post("/tournament/{tournament_id}/debug/force_dialogue")
+async def set_force_dialogue(tournament_id: str, body: ForceDialogueRequest) -> dict:
+    session = get_session(tournament_id)
+    try:
+        session.set_forced_dialogue(body.enabled)
+    except DebugOnlyError as exc:
+        raise HTTPException(403, str(exc)) from exc
     return {"ok": True}
 
 

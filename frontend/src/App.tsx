@@ -49,7 +49,7 @@ function StartOverlay({
           handCount={0}
           smallBlind={PLACEHOLDER_SMALL_BLIND}
           bigBlind={PLACEHOLDER_BIG_BLIND}
-          orbitsUntilNextLevel={2}
+          handsUntilNextOrbit={PLACEHOLDER_PLAYERS.length}
           players={PLACEHOLDER_PLAYERS}
           humanPlayerId="human"
         />
@@ -101,7 +101,7 @@ function GameScreen({
   humanPlayerId: string;
   isDebug: boolean;
 }) {
-  const { state, submitAction } = useGameSocket(tournamentId);
+  const { state, submitAction, isAwaitingHumanAction } = useGameSocket(tournamentId, humanPlayerId);
   const { enqueue } = useAudioQueue();
 
   const [speechMessages, setSpeechMessages] = useState<Record<string, string | null>>({});
@@ -163,7 +163,12 @@ function GameScreen({
       isButton: handSeat?.is_button ?? false,
       isSmallBlind: handSeat?.is_small_blind ?? false,
       isBigBlind: handSeat?.is_big_blind ?? false,
-      isToAct: handSeat?.is_to_act ?? false,
+      // the human's own "to act" glow waits for isAwaitingHumanAction (only
+      // true once the backend is actually ready for their input) instead of
+      // the raw broadcast flag, which flips to them the instant the previous
+      // actor's action is applied -- well before that actor's own pacing
+      // delay (audio, dialogue) has actually finished playing out
+      isToAct: player.player_id === humanPlayerId ? isAwaitingHumanAction : handSeat?.is_to_act ?? false,
       holeCards: handSeat?.hole_cards ?? null,
       buyInsUsed: player.buy_ins_used,
       buyInsRemaining: player.buy_ins_remaining,
@@ -175,11 +180,12 @@ function GameScreen({
     };
   });
 
-  // derived from the broadcast state (not state.actorView -- that's only
-  // refreshed the instant it's the human's turn, whereas current_actor_id is
-  // kept up to date on every event) so it flips false the moment an opponent
-  // starts acting, not just whenever the human's own view happens to update
-  const isMyTurn = publicState.hand?.current_actor_id === humanPlayerId;
+  // see useGameSocket's isAwaitingHumanAction for why this isn't just
+  // `publicState.hand?.current_actor_id === humanPlayerId`: that flips true
+  // before the backend has actually created a pending action for the human
+  // to submit against, right after the previous actor's own action is
+  // applied but before their pacing delay (dialogue/audio) finishes
+  const isMyTurn = isAwaitingHumanAction;
 
   // best-effort "what would I owe to call, right now" signal for whenever
   // it's NOT actually the human's turn yet (so there's no real legal_actions
@@ -199,13 +205,13 @@ function GameScreen({
   const liveMinRaiseTo = Math.min(liveMaxRaiseTo, liveMaxBet + publicState.big_blind);
 
   return (
-    <div className="game-screen">
+    <div className={`game-screen${isDebug ? " game-screen--debug" : ""}`}>
       {isDebug && <DebugWidget tournamentId={tournamentId} />}
       <TournamentStatus
         handCount={publicState.hand_count}
         smallBlind={publicState.small_blind}
         bigBlind={publicState.big_blind}
-        orbitsUntilNextLevel={publicState.orbits_until_next_level}
+        handsUntilNextOrbit={publicState.hands_until_next_orbit}
         players={publicState.players}
         humanPlayerId={humanPlayerId}
       />

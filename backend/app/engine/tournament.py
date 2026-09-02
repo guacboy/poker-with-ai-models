@@ -85,8 +85,21 @@ class Tournament:
         return rules.blinds_for_level(self.blind_level)
 
     @property
-    def orbits_until_next_level(self) -> int:
-        return rules.ORBITS_PER_BLIND_LEVEL - self.orbits_completed_this_level
+    def hands_until_next_orbit(self) -> int:
+        """How many more hands -- starting from the one just dealt or still
+        in progress -- until the button completes its current orbit (see
+        `_track_orbit`). A much more concrete countdown for players than a
+        raw orbit count: one orbit can be anywhere from a couple of hands
+        (short-handed, near the end of a tournament) to a full table's worth,
+        so "1 orbit" on its own doesn't say much about how soon that is.
+
+        `orbit_seen_button_ids` is intersected with the currently active
+        players (rather than used as-is) so a mid-orbit bust -- someone who'd
+        already held the button this orbit going out -- doesn't undercount
+        how many hands are actually left."""
+        active_ids = {p.id for p in self.active_players()}
+        already_seen = self.orbit_seen_button_ids & active_ids
+        return len(active_ids) - len(already_seen) + 1
 
     # -- hand lifecycle -----------------------------------------------------
 

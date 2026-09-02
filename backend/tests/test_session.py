@@ -852,6 +852,8 @@ async def test_debug_only_controls_reject_a_non_debug_session() -> None:
     with pytest.raises(DebugOnlyError):
         session.set_always_show_hands(True)
     with pytest.raises(DebugOnlyError):
+        session.set_forced_dialogue(True)
+    with pytest.raises(DebugOnlyError):
         await session.force_end_round()
 
 
@@ -953,6 +955,42 @@ async def test_always_show_hands_reveals_a_folded_seats_cards(monkeypatch: pytes
     last_hand = player_actions[-1]["state"]["hand"]
     folded_seat = next(s for s in last_hand["seats"] if s["folded"])
     assert folded_seat["hole_cards"] is not None
+
+
+@pytest.mark.asyncio
+async def test_forced_dialogue_guarantees_a_message_on_every_ai_action(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Deliberately doesn't combine this with set_forced_ai_action: a forced
+    action mode overrides decide() outright (see _forced_action_result),
+    never even calling into the MockPlayer that force_dialogue actually
+    affects -- this needs MockPlayer's own (still randomized-action) decide()
+    to run so its now-guaranteed dialogue has anything to attach to."""
+    monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
+
+    session = GameSession.new("Dylan", debug=True)
+    session.set_forced_dialogue(True)
+    ws = FakeWebSocket()
+    session.websockets.add(ws)
+    session.start()
+
+    for _ in range(500):
+        await asyncio.sleep(0.005)
+        if session.pending_human_action is not None and not session.pending_human_action.done():
+            legal = session.tournament.current_hand.legal_actions()
+            action = "check_or_call" if legal.can_check_or_call else "fold"
+            session.submit_human_action(action, None)
+        if any(e["type"] == "hand_result" for e in ws.events):
+            break
+
+    session.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await session.task
+
+    ai_actions = [
+        e for e in ws.events if e["type"] == "player_action" and e["player_id"] != session.human_player_id
+    ]
+    assert ai_actions, "expected at least one AI action"
+    for event in ai_actions:
+        assert event["message"] is not None
 
 
 @pytest.mark.asyncio

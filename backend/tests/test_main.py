@@ -76,6 +76,9 @@ def test_debug_endpoints_reject_a_real_tournament(client: TestClient) -> None:
     resp = client.post(f"/tournament/{tid}/debug/always_show_hands", json={"enabled": True})
     assert resp.status_code == 403
 
+    resp = client.post(f"/tournament/{tid}/debug/force_dialogue", json={"enabled": True})
+    assert resp.status_code == 403
+
     resp = client.post(f"/tournament/{tid}/debug/end_round")
     assert resp.status_code == 403
 
@@ -90,6 +93,9 @@ def test_debug_endpoints_work_on_a_debug_tournament(client: TestClient) -> None:
     assert resp.status_code == 400
 
     resp = client.post(f"/tournament/{tid}/debug/always_show_hands", json={"enabled": True})
+    assert resp.status_code == 200
+
+    resp = client.post(f"/tournament/{tid}/debug/force_dialogue", json={"enabled": True})
     assert resp.status_code == 200
 
     resp = client.post(f"/tournament/{tid}/debug/end_round")
