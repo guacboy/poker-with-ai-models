@@ -366,11 +366,20 @@
   }
 }
 
-.seat--folded {
+/* Dimmed on the seat's cards/info/bet-chip specifically, not the whole
+   `.seat` container -- opacity on a parent composites its entire subtree at
+   reduced alpha, which no child can undo, so a speech bubble (a sibling of
+   these, not dimmed here) would otherwise still show up faded even while
+   actively talking. */
+.seat--folded .seat__cards,
+.seat--folded .seat__info,
+.seat--folded .seat__bet-chip {
   opacity: 0.45;
 }
 
-.seat--eliminated {
+.seat--eliminated .seat__cards,
+.seat--eliminated .seat__info,
+.seat--eliminated .seat__bet-chip {
   opacity: 0.3;
   filter: grayscale(1);
 }
