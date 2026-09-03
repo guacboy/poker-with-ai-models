@@ -84,4 +84,11 @@ VOICE_BY_PLAYER_ID: dict[str, str] = {
     "grok": "am_fenrir",
 }
 
+# Per-voice loudness correction: hf_alpha renders noticeably louder than the
+# other built-in Kokoro voices at the same nominal level, so it's scaled down
+# to match. Missing entries default to 1.0 (unchanged) in kokoro_tts.synthesize.
+VOICE_VOLUME_BY_PLAYER_ID: dict[str, float] = {
+    "gemini": 0.75,
+}
+
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")

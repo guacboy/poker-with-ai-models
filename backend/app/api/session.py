@@ -225,7 +225,11 @@ class GameSession:
         downloaded yet) -- either way collapses to (None, None)."""
         if not message:
             return None, None
-        audio = await synthesize(message, config.VOICE_BY_PLAYER_ID.get(pid, ""))
+        audio = await synthesize(
+            message,
+            config.VOICE_BY_PLAYER_ID.get(pid, ""),
+            config.VOICE_VOLUME_BY_PLAYER_ID.get(pid, 1.0),
+        )
         return audio if audio else (None, None)
 
     def _crossed_street_sizes(self, hand, board_before_len: int) -> list[int]:

@@ -258,7 +258,7 @@ async def test_pacing_waits_for_audio_duration_plus_trailing_delay(
     requested_sleeps: list[float] = []
     real_sleep = asyncio.sleep
 
-    async def fake_synthesize(text: str, voice: str):
+    async def fake_synthesize(text: str, voice: str, volume: float = 1.0):
         return "fakebase64", fake_duration
 
     async def spying_sleep(delay: float, *args, **kwargs):
@@ -459,7 +459,7 @@ async def test_showdown_win_triggers_a_guaranteed_win_reaction_for_every_ai_winn
     monkeypatch.setattr(config, "BOARD_REVEAL_DELAY_SECONDS", 0.01)
     monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.01)
 
-    async def fake_synthesize(text: str, voice: str):
+    async def fake_synthesize(text: str, voice: str, volume: float = 1.0):
         return "fakebase64", 0.01
 
     monkeypatch.setattr(session_module, "synthesize", fake_synthesize)
@@ -525,7 +525,7 @@ async def test_long_reveal_dialogue_only_adds_one_second_past_display_delay(
     requested_sleeps: list[float] = []
     real_sleep = asyncio.sleep
 
-    async def fake_synthesize(text: str, voice: str):
+    async def fake_synthesize(text: str, voice: str, volume: float = 1.0):
         return "fakebase64", fake_duration
 
     async def spying_sleep(delay: float, *args, **kwargs):
@@ -589,7 +589,7 @@ async def test_short_reveal_dialogue_tops_up_to_the_standard_display_delay(
     requested_sleeps: list[float] = []
     real_sleep = asyncio.sleep
 
-    async def fake_synthesize(text: str, voice: str):
+    async def fake_synthesize(text: str, voice: str, volume: float = 1.0):
         return "fakebase64", fake_duration
 
     async def spying_sleep(delay: float, *args, **kwargs):
@@ -682,7 +682,7 @@ async def test_turn_or_river_fold_out_win_still_triggers_a_win_reaction(monkeypa
     monkeypatch.setattr(config, "AI_THINKING_DELAY_SECONDS", 0)
     monkeypatch.setattr(config, "HAND_RESULT_DISPLAY_SECONDS", 0.01)
 
-    async def fake_synthesize(text: str, voice: str):
+    async def fake_synthesize(text: str, voice: str, volume: float = 1.0):
         return "fakebase64", 0.01
 
     monkeypatch.setattr(session_module, "synthesize", fake_synthesize)
@@ -1200,7 +1200,7 @@ def test_sore_loser_target_is_none_when_the_ai_mucked_without_showing() -> None:
 async def test_broadcast_loss_reaction_fires_and_returns_pacing_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(config, "AUDIO_TRAILING_DELAY_SECONDS", 0.1)
 
-    async def fake_synthesize(text: str, voice: str):
+    async def fake_synthesize(text: str, voice: str, volume: float = 1.0):
         return "fakebase64", 0.02
 
     monkeypatch.setattr(session_module, "synthesize", fake_synthesize)
@@ -1227,6 +1227,29 @@ async def test_broadcast_loss_reaction_fires_and_returns_pacing_seconds(monkeypa
     assert loss_reactions[0]["player_id"] == AI_ID
     assert loss_reactions[0]["message"] == "Losing with One pair? Rigged."
     assert loss_reactions[0]["audio_base64"] == "fakebase64"
+
+
+@pytest.mark.asyncio
+async def test_synthesize_for_passes_the_players_configured_volume(monkeypatch: pytest.MonkeyPatch) -> None:
+    """gemini's voice (hf_alpha) renders louder than the others, so config.py
+    scales it down; `_synthesize_for` must actually forward that per-player
+    volume to `synthesize` rather than always using the default of 1.0."""
+    monkeypatch.setitem(config.VOICE_VOLUME_BY_PLAYER_ID, "gemini", 0.75)
+    seen_calls: list[tuple[str, str, float]] = []
+
+    async def fake_synthesize(text: str, voice: str, volume: float = 1.0):
+        seen_calls.append((text, voice, volume))
+        return "fakebase64", 0.01
+
+    monkeypatch.setattr(session_module, "synthesize", fake_synthesize)
+
+    session = GameSession.new("Dylan", debug=True)
+
+    await session._synthesize_for("gemini", "gg")
+    await session._synthesize_for("claude", "gg")
+
+    assert seen_calls[0] == ("gg", config.VOICE_BY_PLAYER_ID["gemini"], 0.75)
+    assert seen_calls[1] == ("gg", config.VOICE_BY_PLAYER_ID["claude"], 1.0)
 
 
 class ViewCapturingLossPlayer:

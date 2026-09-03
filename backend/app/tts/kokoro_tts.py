@@ -37,8 +37,8 @@ def _get_kokoro():
     return _kokoro
 
 
-def _samples_to_wav_base64(samples: np.ndarray, sample_rate: int) -> str:
-    pcm16 = (np.clip(samples, -1.0, 1.0) * 32767).astype(np.int16)
+def _samples_to_wav_base64(samples: np.ndarray, sample_rate: int, volume: float) -> str:
+    pcm16 = (np.clip(samples * volume, -1.0, 1.0) * 32767).astype(np.int16)
     buf = io.BytesIO()
     with wave.open(buf, "wb") as wf:
         wf.setnchannels(1)
@@ -48,18 +48,22 @@ def _samples_to_wav_base64(samples: np.ndarray, sample_rate: int) -> str:
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def _synthesize_sync(text: str, voice: str) -> Optional[tuple[str, float]]:
+def _synthesize_sync(text: str, voice: str, volume: float) -> Optional[tuple[str, float]]:
     kokoro = _get_kokoro()
     if kokoro is None:
         return None
     samples, sample_rate = kokoro.create(text, voice=voice, speed=1.0, lang="en-us")
     duration_seconds = len(samples) / sample_rate
-    return _samples_to_wav_base64(samples, sample_rate), duration_seconds
+    return _samples_to_wav_base64(samples, sample_rate, volume), duration_seconds
 
 
-async def synthesize(text: str, voice: str) -> tuple[str, float] | None:
+async def synthesize(text: str, voice: str, volume: float = 1.0) -> tuple[str, float] | None:
     """Returns (base64-encoded WAV audio, duration in seconds) for `text`, or
     None if the model isn't downloaded yet. The duration is what lets the game
     loop pace itself around how long the line actually takes to play, not just
-    a guess. Synthesis is CPU-bound, so it runs off the event loop."""
-    return await asyncio.to_thread(_synthesize_sync, text, voice)
+    a guess. Synthesis is CPU-bound, so it runs off the event loop.
+
+    `volume` scales the raw samples before they're clipped to 16-bit PCM --
+    some Kokoro voices are naturally louder than others, so callers can even
+    them out per-voice rather than relying on playback-side volume."""
+    return await asyncio.to_thread(_synthesize_sync, text, voice, volume)
