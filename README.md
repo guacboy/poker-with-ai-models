@@ -50,11 +50,12 @@ The game loop is a single asyncio task per tournament (`GameSession._run`). It d
 - Pre-action queuing: queue a fold/call/check before it's your turn. It fires as soon as your turn comes up, and options that no longer apply (like "check" after a bet comes in) are hidden.
 - Pot-relative bet sizing: buttons for 1/2 pot, pot, 2x pot, and all-in.
 - Showdown text: the winning hand's category is shown (including a plain "High card"), a chopped pot is called out, and the community cards that made up the winning hand are highlighted. Only the cards that actually mattered (e.g. the pair itself, not incidental kickers).
+- Chip leader tag: an "L" badge marks whoever currently has the most chips among players still in the tournament (no tag at all in a tie, e.g. hand 1 before anyone's won a pot).
 - Debug Mode, described below, for testing against mock opponents with no API calls.
 
 ## Tournament format
 
-6-max, 100 BB starting stack, blinds increase every 1 orbit (the button returning to someone who already held it counts as one orbit, which naturally speeds up as players bust), up to 3 buy-ins per player (human and AI alike, fixed rebuy size), no antes. All of this is tunable in [`backend/app/rules.py`](backend/app/rules.py).
+6-max, 100 BB starting stack, blinds increase every 1 orbit (the button returning to someone who already held it counts as one orbit, which naturally speeds up as players bust). Blind levels aren't a fixed schedule -- each level's big blind is computed directly from a growth-factor formula compounding off the starting big blind, so they keep climbing indefinitely no matter how long a tournament (or a heads-up stalemate) runs. Up to 3 buy-ins per player (human and AI alike, fixed rebuy size), no antes. All of this is tunable in [`backend/app/rules.py`](backend/app/rules.py).
 
 ## AI trash talk
 
@@ -68,6 +69,7 @@ The start screen has a smaller "Debug Mode" button below "Start Tournament". It 
 
 - **Force All-Ins / Force Call / Force Check / Force Fold**: pins every AI seat's decision to one action (clamped to whatever's actually legal)
 - **Always Show Hands**: reveals every seat's hole cards regardless of fold/showdown status
+- **Force Dialogue**: guarantees every mock AI action, win, and loss comes with a spoken line instead of leaving it to chance
 - **End Round**: immediately forfeits the in-progress hand (any chips already in the pot stay forfeited) and deals the next one
 
 ## Setup
