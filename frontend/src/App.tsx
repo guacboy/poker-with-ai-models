@@ -147,6 +147,19 @@ function GameScreen({
     return <div className="loading-screen">Connecting…</div>;
   }
 
+  // chip leader: whoever has strictly the most chips among players still in
+  // the tournament -- a tie (e.g. everyone at the starting stack in hand 1)
+  // means there's no single leader, so nobody gets tagged
+  const activeStacks = publicState.players
+    .filter((player) => player.status !== "eliminated")
+    .map((player) => ({
+      playerId: player.player_id,
+      stack: displayHand?.seats.find((s) => s.player_id === player.player_id)?.stack ?? player.stack,
+    }));
+  const maxStack = activeStacks.length > 0 ? Math.max(...activeStacks.map((p) => p.stack)) : 0;
+  const playersAtMaxStack = activeStacks.filter((p) => p.stack === maxStack);
+  const chipLeaderId = playersAtMaxStack.length === 1 ? playersAtMaxStack[0].playerId : null;
+
   const seats: SeatViewModel[] = publicState.players.map((player) => {
     const handSeat = displayHand?.seats.find((s) => s.player_id === player.player_id);
     const isWinner = isHandResult && (state.handResultWinners?.includes(player.player_id) ?? false);
@@ -163,6 +176,7 @@ function GameScreen({
       isButton: handSeat?.is_button ?? false,
       isSmallBlind: handSeat?.is_small_blind ?? false,
       isBigBlind: handSeat?.is_big_blind ?? false,
+      isChipLeader: player.player_id === chipLeaderId,
       // the human's own "to act" glow waits for isAwaitingHumanAction (only
       // true once the backend is actually ready for their input) instead of
       // the raw broadcast flag, which flips to them the instant the previous

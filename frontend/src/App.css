@@ -524,6 +524,11 @@
   color: #1a1a1a;
 }
 
+.badge--leader {
+  background: #ffd166;
+  color: #1a1a1a;
+}
+
 .seat__eliminated-tag {
   font-size: 11px;
   color: var(--danger);

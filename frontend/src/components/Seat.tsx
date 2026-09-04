@@ -15,6 +15,7 @@ export interface SeatViewModel {
   isButton: boolean;
   isSmallBlind: boolean;
   isBigBlind: boolean;
+  isChipLeader: boolean;
   isToAct: boolean;
   holeCards: string[] | null;
   buyInsUsed: number;
@@ -72,6 +73,7 @@ export function Seat({ seat, speechMessage, positionClassName, bigBlind }: SeatP
           {seat.isButton && <span className="badge badge--button">D</span>}
           {seat.isSmallBlind && <span className="badge badge--blind">SB</span>}
           {seat.isBigBlind && <span className="badge badge--blind">BB</span>}
+          {seat.isChipLeader && <span className="badge badge--leader">L</span>}
           {seat.buyInsUsed > 1 && (
             <span className="badge badge--rebuy">rebuy {seat.buyInsUsed - 1}</span>
           )}

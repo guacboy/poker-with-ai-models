@@ -43,6 +43,7 @@ export const PLACEHOLDER_SEATS: SeatViewModel[] = SEAT_SPECS.map((spec) => ({
   isButton: false,
   isSmallBlind: false,
   isBigBlind: false,
+  isChipLeader: false,
   isToAct: false,
   holeCards: null,
   buyInsUsed: 1,
