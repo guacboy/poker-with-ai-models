@@ -125,7 +125,14 @@ class Hand:
             raw_starting_stacks,
             len(seat_player_ids),
         )
-        return cls(state, seat_player_ids, dict(zip(seat_player_ids, raw_starting_stacks)))
+        hand = cls(state, seat_player_ids, dict(zip(seat_player_ids, raw_starting_stacks)))
+        # blind posting alone can already leave nobody able to act -- e.g. a
+        # short stack's forced blind is their entire remaining stack, covered
+        # by the other player, with no decision left for anyone -- in which
+        # case pokerkit jumps straight to showdown before any apply_* method
+        # (the usual place this gets forced) is ever called.
+        hand._force_full_showdown_reveal()
+        return hand
 
     @property
     def is_over(self) -> bool:

@@ -55,6 +55,21 @@ def test_fold_out_win_reveals_no_hole_cards():
     assert hand.revealed_hole_cards() == {}
 
 
+def test_hand_resolves_immediately_when_blind_posting_alone_covers_an_all_in():
+    """A short stack posting its blind can be its entire remaining stack --
+    already all-in before anyone gets to act at all, with the other side
+    already covering it, so pokerkit closes betting and runs the board out
+    via automation before `Hand.start` even returns. Regression test for a
+    crash where `current_actor_id` was None while `is_over` was still False,
+    because nothing had yet forced the (non-automated) show-or-muck step that
+    `apply_*` normally triggers -- but there was no `apply_*` call to do it,
+    since nobody ever got to act."""
+    hand = Hand.start(["p0", "p1"], {"p0": 50, "p1": 100_000}, small_blind=100, big_blind=200)
+
+    assert hand.is_over
+    assert hand.current_actor_id is None
+
+
 def test_winning_hand_label_is_a_real_category_at_showdown():
     t = make_tournament()
     hand = t.start_hand()
